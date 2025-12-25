@@ -24,17 +24,14 @@ WORKDIR /app
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     curl \
-    gosu \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r app && useradd --create-home --shell /bin/bash --gid app app \
-    && mkdir -p /app/logs \
-    && chown -R app:app /app
+    && mkdir -p /app/logs
 
 # Copy installed packages from builder
-COPY --from=builder /root/.local /home/app/.local
+COPY --from=builder /root/.local /root/.local
 
 # Set environment variables
-ENV PATH=/home/app/.local/bin:$PATH \
+ENV PATH=/root/.local/bin:$PATH \
     PYTHONPATH=/app \
     PYTHONUNBUFFERED=1
 
@@ -43,16 +40,13 @@ RUN mkdir -p /app/api/v1/{routers,services,request_models,response_models} \
     /core/{caching,dependencies,scheduled_tasks,task_locking,utils}
 
 # Copy application files
-COPY --chown=app:app main.py .
-COPY --chown=app:app config.py .
-COPY --chown=app:app api/ ./api/
-COPY --chown=app:app core/ ./core/
+COPY main.py .
+COPY config.py .
+COPY api/ ./api/
+COPY core/ ./core/
 
 # Copy environment file if it exists
-COPY --chown=app:app .env .env
-
-# Switch to non-root user
-USER app
+COPY .env .env
 
 # Expose the port
 EXPOSE 8000

@@ -28,7 +28,7 @@ services:
       - ./logs:/app/logs
     init: true
     entrypoint: >
-      sh -c "mkdir -p /app/logs && exec gosu app python main.py"
+      sh -c "mkdir -p /app/logs && python main.py"
     networks:
       - woocommerce-network
     healthcheck:

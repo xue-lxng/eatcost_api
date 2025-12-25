@@ -8,7 +8,7 @@ from litestar.di import Provide
 from litestar.openapi import OpenAPIConfig
 
 import api
-from config import REDIS_URL, setup_file_logger, logger
+from config import REDIS_URL, logger
 from core.dependencies.redis import get_redis
 from core.scheduled_tasks.products import get_app_products_periodically, get_products_by_category_periodically
 from core.scheduled_tasks.search import update_search_autocomplete_periodically
@@ -19,13 +19,6 @@ from core.task_locking.in_redis import DistributedLock
 async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
     print("Starting application")
     await DistributedLock.init_redis(REDIS_URL)
-
-    # Setup file logger after application starts
-    try:
-        setup_file_logger()
-        logger.info("File logger setup successfully")
-    except Exception as e:
-        logger.error(f"Failed to setup file logger: {e}")
 
     asyncio.create_task(get_app_products_periodically(get_redis()))
     asyncio.create_task(get_products_by_category_periodically(get_redis()))

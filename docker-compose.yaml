@@ -59,14 +59,3 @@ volumes:
 networks:
   woocommerce-network:
     driver: bridge
-
-# Development profile for local development
-profiles:
-  development:
-    environment:
-      - ENVIRONMENT=development
-    volumes:
-      - .:/app
-      - /app/__pycache__
-      - /app/.venv
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

@@ -45,8 +45,8 @@ COPY --chown=app:app config.py .
 COPY --chown=app:app api/ ./api/
 COPY --chown=app:app core/ ./core/
 
-# Copy environment file
-COPY --chown=app:app .env.example .env
+# Copy environment file if it exists
+COPY --chown=app:app .env .env
 
 # Switch to non-root user
 USER app

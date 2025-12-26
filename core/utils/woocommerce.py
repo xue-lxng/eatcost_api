@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Dict, Any, Union
 
 import aiohttp
@@ -235,7 +236,22 @@ class WooCommerceUtils:
             logger.error(f"Unexpected error searching products: {str(e)}")
             raise ValueError(f"Failed to search products: {str(e)}")
 
-    async def get_categories(self) -> List[str]:
+    async def request_categories(self, page: int) -> List[str]:
+        async with self.session.get(
+                f"{self.base_url}/wp-json/wc/v3/products/categories",
+                params={"per_page": 100, "page": page},
+                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+        ) as response:
+            response.raise_for_status()
+            result = await response.json()
+            if response.status != 200:
+                logger.warning(f"Categories returned status {response.status}")
+                return []
+
+            return result
+
+
+    async def get_categories(self, simplified: bool = True) -> List[str]:
         """
         Fetch all product categories.
 
@@ -255,21 +271,32 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
 
         try:
-            async with self.session.get(
-                f"{self.base_url}/wp-json/wc/v3/products/categories",
-                params={"per_page": 100, "page": 1},
-                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
-            ) as response:
-                response.raise_for_status()
-                result = await response.json()
+            tasks = [
+                self.request_categories(page) for page in range(1, 11)
+            ]
+            result = await asyncio.gather(
+                *tasks
+            )
 
-                if response.status != 200:
-                    logger.warning(f"Categories returned status {response.status}")
-                    return []
 
-                categories = [item["id"] for item in result]
-                logger.info(f"Retrieved {len(categories)} categories")
-                return categories
+            categories = []
+            for cat in result:
+                categories.extend(cat)
+
+            if simplified:
+                categories_formatted = [
+                    item.get("id") for item in categories
+                ]
+            else:
+                categories_formatted = [
+                    {
+                        "category_id": cat.get("id"),
+                        "category_name": cat.get("name"),
+                    }
+                    for cat in categories
+                ]
+            logger.info(f"Retrieved {len(categories)} categories")
+            return categories_formatted
 
         except ClientResponseError as e:
             logger.error(f"WooCommerce API error (categories): {e.status} - {e.message}")
@@ -384,7 +411,7 @@ class WooCommerceUtils:
 
         async with self.session.post(
             f"{self.base_url}/?rest_route=/simple-jwt-login/v1/token/refresh",
-                headers={"Authorization": f"Bearer {jwt_token}"}
+                headers={"Authorization": jwt_token}
             ) as response:
             response.raise_for_status()
             result = await response.json()
@@ -399,7 +426,7 @@ class WooCommerceUtils:
 
         async with self.session.put(
             f"{self.base_url}/?api-proxy.php?endpoint=simple-jwt-login/v1/user/reset_password",
-                headers={"Authorization": f"Bearer {jwt_token}"},
+                headers={"Authorization": jwt_token},
                 json={
                     "email": email,
                     "new_password": password,
@@ -511,10 +538,12 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
         async with self.session.get(
             f"{self.base_url}/wp-json/wc/store/v1/cart",
-            headers={"Authorization": f"Bearer {jwt_token}"}
+            headers={"Authorization": jwt_token}
         ) as response:
             response.raise_for_status()
             data = await response.json()
+            logger.info(f"JWT Token: {jwt_token}")
+            logger.info(f"Cart fetched successfully: {data}")
             cart_token = response.headers.get("Cart-Token")
             return {"items": self.format_cart(data), "cart_token": cart_token}
 

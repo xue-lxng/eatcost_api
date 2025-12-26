@@ -50,7 +50,7 @@ async def update_current_user_profile(
     Update current user profile
     """
     try:
-        user = await AuthService.decode_jwt_token(token.replace("Bearer ", ""))
+        user = AuthService.decode_jwt_token(token.replace("Bearer ", ""))
         user_id = user.get("id")
 
         if not user_id:

@@ -1,9 +1,12 @@
+import asyncio
+
 from litestar import Router, post, put, Request, status_codes
 from litestar.exceptions import HTTPException
 
 from api.v1.response_models.auth import UserRegistrationRequest, UserLoginRequest, AuthResponse, RefreshTokenResponse, ErrorResponse
 from api.v1.request_models.auth import RefreshTokenRequest, ResetPasswordRequest
 from api.v1.services.auth import AuthService
+from api.v1.services.cards import CardsService
 from config import logger
 
 
@@ -38,6 +41,9 @@ async def register_user(
 
         if "jwt" in result:
             logger.info(f"Auth Router: Registration successful - Email: {data.email}, IP: {client_ip}")
+            user = AuthService.decode_jwt_token(result["jwt"].replace("Bearer ", ""))
+            user_id = user.get("id")
+            asyncio.create_task(CardsService.create_customer(user_id))
             return AuthService.format_auth_response(result["jwt"])
         else:
             error = result.get("error", "Registration failed")

@@ -10,8 +10,8 @@ class ProductAttribute(msgspec.Struct, omit_defaults=True):
 
     id: int
     name: str
-    taxonomy: str
-    has_variations: str
+    taxonomy: str | None
+    has_variations: bool
     terms: List[AttributeTerms]
 
 

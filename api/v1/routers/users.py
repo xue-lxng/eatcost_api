@@ -114,4 +114,12 @@ async def get_user_qr(
             detail=str(e)
         )
 
+
+@get("/cards", status_code=HTTP_200_OK)
+async def get_users_cards(
+    request: Request,
+) -> Dict[str, Any]:
+    pass
+
+
 router = Router(path="/users", tags=["Users"], security=[{"Authentication": ["Bearer"]}], route_handlers=[get_current_user_profile, update_current_user_profile, get_user_membership, get_user_qr])

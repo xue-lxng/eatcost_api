@@ -73,9 +73,10 @@ class WooCommerceUtils:
         Returns:
             Aggregated product data as a dictionary.
         """
-        price = self._to_float(product.get("price", 0) or 0)
-        regular_price = self._get_price(product.get("regular_price"), price)
-        sale_price = self._get_price(product.get("sale_price"), price)
+        prices = product.get("prices", {})
+        price = self._to_float(prices.get("price", 0) or 0) / 100
+        regular_price = self._get_price(prices.get("regular_price"), price) / 100
+        sale_price = self._get_price(prices.get("sale_price"), price) / 100
         attributes = product.get("attributes", [])
         variations = product.get("variations", [])
 

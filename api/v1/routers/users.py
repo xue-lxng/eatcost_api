@@ -176,7 +176,7 @@ async def connect_new_card(
         )
 
 
-@delete("/cards/{card_id}", status_code=HTTP_200_OK)
+@delete("/cards/{card_id:str}", status_code=HTTP_200_OK)
 async def remove_user_card(
     request: Request,
     card_id: str,

@@ -309,8 +309,6 @@ class WooCommerceUtils:
             for cat in result:
                 categories.extend(cat)
 
-            logger.info(f"Categories: {categories}")
-
             if simplified:
                 categories_formatted = [item.get("id") for item in categories]
             else:
@@ -323,7 +321,6 @@ class WooCommerceUtils:
                     for cat in categories
                 ]
             logger.info(f"Retrieved {len(categories)} categories")
-            logger.info(f"Categories Formated: {categories_formatted}")
             return categories_formatted
 
         except ClientResponseError as e:

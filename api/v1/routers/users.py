@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-from litestar import Router, get, put, Request
+from litestar import Router, get, put, delete, post, Request
 from litestar.exceptions import HTTPException
 from litestar.status_codes import (
     HTTP_200_OK,
@@ -141,6 +141,74 @@ async def get_users_cards(
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@post("/cards/connect", status_code=HTTP_200_OK)
+async def connect_new_card(
+    request: Request,
+) -> Dict[str, Any]:
+    """
+    Get URL to connect new card to user's account
+    """
+    jwt_token = request.headers.get("Authorization", None)
+    if jwt_token is None:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+    if "Bearer " not in jwt_token:
+        raise HTTPException(
+            status_code=401, detail="Invalid authorization token format"
+        )
+    try:
+        user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
+        user_id = user.get("id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=HTTP_400_BAD_REQUEST, detail="User ID not found in token"
+            )
+
+        connect_url = await CardsService.get_url_to_connect_new_card(user_id)
+        return {
+            "data": {"connect_url": connect_url},
+            "message": "Card connection URL generated successfully",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@delete("/cards/{card_id}", status_code=HTTP_200_OK)
+async def remove_user_card(
+    request: Request,
+    card_id: str,
+) -> Dict[str, Any]:
+    """
+    Remove card from user's account
+    """
+    jwt_token = request.headers.get("Authorization", None)
+    if jwt_token is None:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+    if "Bearer " not in jwt_token:
+        raise HTTPException(
+            status_code=401, detail="Invalid authorization token format"
+        )
+    try:
+        user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
+        user_id = user.get("id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=HTTP_400_BAD_REQUEST, detail="User ID not found in token"
+            )
+
+        result = await CardsService.remove_card_from_user(user_id, card_id)
+        return {"data": result, "message": "Card removed successfully"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
 router = Router(
     path="/users",
     tags=["Users"],
@@ -151,5 +219,7 @@ router = Router(
         get_user_membership,
         get_user_qr,
         get_users_cards,
+        connect_new_card,
+        remove_user_card,
     ],
 )

@@ -15,9 +15,12 @@ class CartService:
     async def get_cart(jwt_token: str, redis: AsyncRedisCache):
         try:
             try:
-                user = AuthService.decode_jwt_token(
+                decoded_token = AuthService.decode_jwt_token(
                     jwt_token.replace("Bearer ", "")
-                ).get("id")
+                )
+                if not decoded_token or not decoded_token.get("id"):
+                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
             cache_key = f"cart:{user}"
@@ -48,9 +51,12 @@ class CartService:
     ):
         try:
             try:
-                user = AuthService.decode_jwt_token(
+                decoded_token = AuthService.decode_jwt_token(
                     jwt_token.replace("Bearer ", "")
-                ).get("id")
+                )
+                if not decoded_token or not decoded_token.get("id"):
+                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
             cache_key = f"cart_token:{user}"
@@ -87,9 +93,12 @@ class CartService:
     ):
         try:
             try:
-                user = AuthService.decode_jwt_token(
+                decoded_token = AuthService.decode_jwt_token(
                     jwt_token.replace("Bearer ", "")
-                ).get("id")
+                )
+                if not decoded_token or not decoded_token.get("id"):
+                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
             cache_key = f"cart_token:{user}"
@@ -126,9 +135,12 @@ class CartService:
     ):
         try:
             try:
-                user = AuthService.decode_jwt_token(
+                decoded_token = AuthService.decode_jwt_token(
                     jwt_token.replace("Bearer ", "")
-                ).get("id")
+                )
+                if not decoded_token or not decoded_token.get("id"):
+                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
             cache_key = f"cart_token:{user}"

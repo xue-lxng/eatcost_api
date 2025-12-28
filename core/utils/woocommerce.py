@@ -157,7 +157,8 @@ class WooCommerceUtils:
                                 "category_name": "Без категории",
                                 "items": [],
                             }
-                        categories_map[uncategorized_id]["items"].append(simplified)
+                        if uncategorized_id in categories_map:
+                            categories_map[uncategorized_id]["items"].append(simplified)
                     else:
                         for cat in categories:
                             cat_id = cat.get("id")
@@ -175,7 +176,8 @@ class WooCommerceUtils:
                                     "items": [],
                                 }
 
-                            categories_map[cat_id]["items"].append(simplified)
+                            if cat_id in categories_map:
+                                categories_map[cat_id]["items"].append(simplified)
                 except Exception as e:
                     logger.error(
                         f"Error processing product {product.get('id')}: {str(e)}"
@@ -307,6 +309,8 @@ class WooCommerceUtils:
             for cat in result:
                 categories.extend(cat)
 
+            logger.info(f"Categories: {categories}")
+
             if simplified:
                 categories_formatted = [item.get("id") for item in categories]
             else:
@@ -314,11 +318,12 @@ class WooCommerceUtils:
                     {
                         "category_id": cat.get("id"),
                         "category_name": cat.get("name"),
-                        "image": cat.get("image", {}).get("src", "")
+                        "image": (cat.get("image", {}).get("src", "") if isinstance(cat.get("image"), dict) else "")
                     }
                     for cat in categories
                 ]
             logger.info(f"Retrieved {len(categories)} categories")
+            logger.info(f"Categories Formated: {categories_formatted}")
             return categories_formatted
 
         except ClientResponseError as e:

@@ -51,3 +51,4 @@ class CategoryProducts(msgspec.Struct, omit_defaults=True):
 class Category(msgspec.Struct, omit_defaults=True):
     category_id: int
     category_name: str
+    image: str

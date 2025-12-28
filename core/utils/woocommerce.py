@@ -314,6 +314,7 @@ class WooCommerceUtils:
                     {
                         "category_id": cat.get("id"),
                         "category_name": cat.get("name"),
+                        "image": cat.get("image", {}).get("src", "")
                     }
                     for cat in categories
                 ]

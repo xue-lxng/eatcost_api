@@ -63,7 +63,6 @@ class UsersService:
         try:
             async with WooCommerceUtils(consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL) as woocommerce:
                 user_membership = await woocommerce.get_user_membership(user_id=user_id)
-                print(user_membership)
                 encoder = msgspec.json.Encoder()
                 decoder = msgspec.json.Decoder(type=UserMembershipResponse)
 

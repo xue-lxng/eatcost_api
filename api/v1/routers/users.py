@@ -6,8 +6,9 @@ from litestar.status_codes import HTTP_200_OK, HTTP_400_BAD_REQUEST, HTTP_404_NO
 
 from api.v1.request_models.users import UserUpdateRequest
 from api.v1.response_models.users import UserWithMembershipResponse, UserQrResponse as UserQrResponseModel, \
-    UserMembershipResponse
+    UserMembershipResponse, CardOutput
 from api.v1.services.auth import AuthService
+from api.v1.services.cards import CardsService
 from api.v1.services.users import UsersService
 
 
@@ -118,8 +119,22 @@ async def get_user_qr(
 @get("/cards", status_code=HTTP_200_OK)
 async def get_users_cards(
     request: Request,
-) -> Dict[str, Any]:
-    pass
+) -> CardOutput:
+    jwt_token = request.headers.get("Authorization", None)
+    if jwt_token is None:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+    if "Bearer " not in jwt_token:
+        raise HTTPException(status_code=401, detail="Invalid authorization token format")
+    try:
+        user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
+        user_id = user.get("id")
+        cards_data = await CardsService.get_users_cards(user_id)
+        return cards_data
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 
-router = Router(path="/users", tags=["Users"], security=[{"Authentication": ["Bearer"]}], route_handlers=[get_current_user_profile, update_current_user_profile, get_user_membership, get_user_qr])
+router = Router(path="/users", tags=["Users"], security=[{"Authentication": ["Bearer"]}], route_handlers=[get_current_user_profile, update_current_user_profile, get_user_membership, get_user_qr, get_users_cards])

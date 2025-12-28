@@ -25,3 +25,9 @@ class UserQrResponse(msgspec.Struct, omit_defaults=True):
     qr_code: str
     timestamp: int
     lifetime: int
+
+
+class CardOutput(msgspec.Struct, omit_defaults=True):
+    CardId: str
+    Pan: str
+    ExpDate: str

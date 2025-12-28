@@ -543,7 +543,6 @@ class WooCommerceUtils:
             response.raise_for_status()
             data = await response.json()
             logger.info(f"JWT Token: {jwt_token}")
-            logger.info(f"Cart fetched successfully: {data}")
             cart_token = response.headers.get("Cart-Token")
             return {"items": self.format_cart(data), "cart_token": cart_token}
 
@@ -553,7 +552,7 @@ class WooCommerceUtils:
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         async with self.session.get(
-            f"{self.base_url}/wp-json/wc/store/v1/cart",
+            f"{self.base_url}/api-proxy.php?endpoint=wc/store/v1/cart/items",
             json={"id":str(product_id),"quantity":quantity, "cart_token": cart_token }
         ) as response:
             response.raise_for_status()

@@ -1,5 +1,6 @@
 import hashlib
-from typing import Dict, Any
+from typing import Dict, Any, List
+from config import logger
 
 import aiohttp
 
@@ -55,10 +56,11 @@ class TBankUtils:
         params["Token"] = token
         async with self.session.post(
             f"{self.base_url}/v2/AddCard",
+            json=params,
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            return {"link": result["Link"]}
+            return {"link": result["PaymentURL"]}
 
     async def remove_card_from_user(self, user_id: str, card_id: str) -> Dict[str, str]:
         params = {
@@ -71,37 +73,51 @@ class TBankUtils:
         params["Token"] = token
         async with self.session.post(
             f"{self.base_url}/v2/RemoveCard",
+            json=params,
         ) as response:
             response.raise_for_status()
             result = await response.json()
             return {"success": result["Success"], "details": result["Details"]}
 
-    async def get_user_cards(self, user_id: str) -> Dict[str, str]:
+
+    @staticmethod
+    def aggregate_cards(cards: list[dict]) -> list[dict]:
+        return [
+            {"CardId": card["CardId"], "Pan": card["Pan"], "ExpDate": card["ExpDate"]}
+            for card in cards
+            if card["Status"] == "A"
+        ]
+
+    async def get_user_cards(self, user_id: str) -> List[Dict[str, str]]:
         params = {
             'TerminalKey': self.terminal_id,
-            'CustomerKey': user_id,
-            "CheckType": "NO",
+            'CustomerKey': str(user_id),
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token
         async with self.session.post(
             f"{self.base_url}/v2/GetCardList",
+            json=params,
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            return {"cards": result["Cards"]}  # Assuming the response contains a list of cards
+            logger.info(f"Cards retrieved: {result}")
+            return self.aggregate_cards(result)  # Assuming the response contains a list of cards
 
     async def create_customer(self, user_id: int):
         params = {
             'TerminalKey': self.terminal_id,
-            'CustomerKey': user_id,
+            'CustomerKey': str(user_id),
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token
         async with self.session.post(
             f"{self.base_url}/v2/AddCustomer",
+            json=params,
         ) as response:
+            logger.info(f"Params: {params}")
             response.raise_for_status()
             result = await response.json()
-            return {"customer_id": result["CustomerID"]}  # Assuming the response contains a customer ID
+            logger.info(f"Customer created: {result}")
+            return {"customer_id": result["CustomerKey"]}  # Assuming the response contains a customer ID
 

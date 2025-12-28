@@ -51,8 +51,8 @@ class CartService:
                     return {"error": "Cart token not found", "message": "Please log in again"}
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
                 for _ in range(3):
-                    data = await woocommerce.add_item_to_cart(cart_token, product_id, quantity)
-                    if data.get("status") in [200, 409]:
+                    data = await woocommerce.add_item_to_cart(cart_token, product_id, quantity, jwt_token)
+                    if data.get("status") in [200, 201, 409]:
                         await redis.delete(f"cart:{user}")
                         break
                     await asyncio.sleep(1)
@@ -79,8 +79,8 @@ class CartService:
                     return {"error": "Cart token not found", "message": "Please log in again"}
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
                 for _ in range(3):
-                    data = await woocommerce.update_item_in_cart(cart_token, product_key, quantity)
-                    if data.get("status") in [200, 409]:
+                    data = await woocommerce.update_item_in_cart(cart_token, product_key, quantity, jwt_token)
+                    if data.get("status") in [200, 201, 409]:
                         await redis.delete(f"cart:{user}")
                         break
                     await asyncio.sleep(1)
@@ -107,8 +107,8 @@ class CartService:
                     return {"error": "Cart token not found", "message": "Please log in again"}
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
                 for _ in range(3):
-                    data = await woocommerce.delete_item_from_cart(cart_token, product_key)
-                    if data.get("status") in [200, 409]:
+                    data = await woocommerce.delete_item_from_cart(cart_token, product_key, jwt_token)
+                    if data.get("status") in [200, 201, 409]:
                         await redis.delete(f"cart:{user}")
                         break
                     await asyncio.sleep(1)

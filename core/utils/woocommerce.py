@@ -546,48 +546,51 @@ class WooCommerceUtils:
             cart_token = response.headers.get("Cart-Token")
             return {"items": self.format_cart(data), "cart_token": cart_token}
 
-    async def add_item_to_cart(self, cart_token: str, product_id: int, quantity: int):
+    async def add_item_to_cart(self, cart_token: str, product_id: int, quantity: int, jwt_token: str):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
-        async with self.session.get(
+        async with self.session.post(
             f"{self.base_url}/api-proxy.php?endpoint=wc/store/v1/cart/items",
-            json={"id":str(product_id),"quantity":quantity, "cart_token": cart_token }
+            json={"id":str(product_id),"quantity":quantity, "cart_token": cart_token },
+            headers={"Authorization": jwt_token}
         ) as response:
+            logger.info(await response.json())
             response.raise_for_status()
             data = await response.json()
             status = response.status
             return {"status": status, "data": data}
 
 
-    async def update_item_in_cart(self, cart_token: str, item_key: str, quantity: int):
+    async def update_item_in_cart(self, cart_token: str, item_key: str, quantity: int, jwt_token: str):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         async with self.session.post(
             f"{self.base_url}/wp-json/wc/store/v1/cart/update-item",
-            headers={"Cart-Token": cart_token},
+            headers={"Cart-Token": cart_token, "Authorization": jwt_token},
             params={
                 "key": item_key,
                 "quantity": quantity,
             }
         ) as response:
+            logger.info(await response.json())
             response.raise_for_status()
             data = await response.json()
             status = response.status
             return {"status": status, "data": data}
 
 
-    async def delete_item_from_cart(self, cart_token: str, item_key: str, quantity: int):
+    async def delete_item_from_cart(self, cart_token: str, item_key: str, jwt_token: str):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         async with self.session.post(
             f"{self.base_url}/wp-json/wc/store/v1/cart/remove-item",
-            headers={"Cart-Token": cart_token},
+            headers={"Cart-Token": cart_token, "Authorization": jwt_token},
             params={
                 "key": item_key,
             }

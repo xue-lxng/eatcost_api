@@ -236,10 +236,10 @@ class WooCommerceUtils:
             logger.error(f"Unexpected error searching products: {str(e)}")
             raise ValueError(f"Failed to search products: {str(e)}")
 
-    async def request_categories(self, page: int) -> List[str]:
+    async def request_categories(self, page: int, parent_category_id: int = None) -> List[str]:
         async with self.session.get(
                 f"{self.base_url}/wp-json/wc/v3/products/categories",
-                params={"per_page": 100, "page": page},
+                params={"per_page": 100, "page": page, "hide_empty": "true"} if parent_category_id is None else {"parent": int(parent_category_id), "per_page": 100, "page": page, "hide_empty": "true"},
                 auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
         ) as response:
             response.raise_for_status()
@@ -251,7 +251,7 @@ class WooCommerceUtils:
             return result
 
 
-    async def get_categories(self, simplified: bool = True) -> List[str]:
+    async def get_categories(self, simplified: bool = True, parent_category_id: int = None) -> List[str]:
         """
         Fetch all product categories.
 
@@ -272,7 +272,7 @@ class WooCommerceUtils:
 
         try:
             tasks = [
-                self.request_categories(page) for page in range(1, 11)
+                self.request_categories(page, parent_category_id) for page in range(1, 11)
             ]
             result = await asyncio.gather(
                 *tasks
@@ -282,6 +282,7 @@ class WooCommerceUtils:
             categories = []
             for cat in result:
                 categories.extend(cat)
+
 
             if simplified:
                 categories_formatted = [

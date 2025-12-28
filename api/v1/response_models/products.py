@@ -44,3 +44,8 @@ class ProductItem(msgspec.Struct, omit_defaults=True):
 class CategoryProducts(msgspec.Struct, omit_defaults=True):
     category_name: str
     items: List[ProductItem]
+
+
+class Category(msgspec.Struct, omit_defaults=True):
+    category_id: int
+    category_name: str

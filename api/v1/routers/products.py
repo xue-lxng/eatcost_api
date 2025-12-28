@@ -3,9 +3,9 @@ from typing import Any
 from litestar import Router, get
 from litestar.params import Parameter
 
-from api.v1.response_models.products import CategoryProducts
+from api.v1.response_models.products import CategoryProducts, Category
 from api.v1.response_models.search import SearchResponse, AutocompleteResponse
-from api.v1.services.products import get_all_products, get_products_by_category
+from api.v1.services.products import get_all_products, get_products_by_category, get_categories
 from api.v1.services.search import search_products_service, search_autocomplete_service
 from core.caching.in_redis import AsyncRedisCache
 from core.utils.woocommerce import WooCommerceUtils
@@ -63,6 +63,17 @@ async def search_products(
     )
 
 
+@get("/category", tags=["Products"])
+async def get_category(redis: AsyncRedisCache, parent_category_id: str | None = Parameter(
+        title="parent_category_id",
+        description="Идентификатор родительской категории",
+        query="parent_category_id",
+        required=False,
+    ),) -> list[Category]:
+    """Retrieve a list of categories from the cache."""
+    return await get_categories(redis, parent_category_id=parent_category_id)
+
+
 @get("", tags=["Products"])
 async def get_products(
     redis: AsyncRedisCache,
@@ -81,4 +92,4 @@ async def get_products(
     )
 
 
-router = Router(path="/products", route_handlers=[search_products, get_products, search_autocomplete])
+router = Router(path="/products", route_handlers=[search_products, get_products, search_autocomplete, get_category])

@@ -8,9 +8,12 @@ from litestar.di import Provide
 from litestar.openapi import OpenAPIConfig
 
 import api
-from config import REDIS_URL, logger
+from config import REDIS_URL
 from core.dependencies.redis import get_redis
-from core.scheduled_tasks.products import get_app_products_periodically, get_products_by_category_periodically
+from core.scheduled_tasks.products import (
+    get_app_products_periodically,
+    get_products_by_category_periodically,
+)
 from core.scheduled_tasks.search import update_search_autocomplete_periodically
 from core.task_locking.in_redis import DistributedLock
 
@@ -33,7 +36,7 @@ app = Litestar(
         title="WooCommerce Manage API",
         version="0.1.0",
     ),
-    lifespan=[lifespan]
+    lifespan=[lifespan],
 )
 
 if __name__ == "__main__":

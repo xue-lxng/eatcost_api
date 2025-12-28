@@ -5,8 +5,7 @@ from typing import Any, Optional, List
 
 import msgpack
 import redis.asyncio as redis
-from redis.asyncio import Redis
-from redis.exceptions import RedisError, ConnectionError, TimeoutError
+from redis.exceptions import RedisError
 
 from config import logger
 
@@ -336,12 +335,12 @@ class AsyncRedisCache:
         return await loop.run_in_executor(None, _deserialize)
 
     async def build_word_autocomplete_index(
-            self,
-            index_key: str,
-            suggestions: List[str],
-            min_prefix_len: int = 2,
-            normalize: bool = True,
-            ttl: Optional[int] = None
+        self,
+        index_key: str,
+        suggestions: List[str],
+        min_prefix_len: int = 2,
+        normalize: bool = True,
+        ttl: Optional[int] = None,
     ) -> int:
         """
         Индексация с префиксами и ссылками на полные названия [web:39][web:45]
@@ -398,11 +397,7 @@ class AsyncRedisCache:
             raise e
 
     async def search_with_word_completion(
-            self,
-            index_key: str,
-            prefix: str,
-            limit: int = 10,
-            normalize: bool = True
+        self, index_key: str, prefix: str, limit: int = 10, normalize: bool = True
     ) -> dict:
         """
         Поиск с извлечением полных названий из индекса [web:39]
@@ -430,7 +425,7 @@ class AsyncRedisCache:
             min=f"[{search_pattern}",
             max=f"[{prefix}\xff",
             start=0,
-            num=limit * 10
+            num=limit * 10,
         )
 
         # Извлекаем полные названия (после символа *)
@@ -472,7 +467,7 @@ class AsyncRedisCache:
 
                 # Проверяем совпадение начальных слов
                 if len(name_words) > len(prefix_words):
-                    if name_words[:len(prefix_words)] == prefix_words:
+                    if name_words[: len(prefix_words)] == prefix_words:
                         next_word = name_words[len(prefix_words)]
                         if next_word not in next_words_set:
                             next_words_set.add(next_word)
@@ -484,16 +479,9 @@ class AsyncRedisCache:
                 "mode": "next_word",
                 "suggestions": matching_names[:limit],
                 "next_words_only": next_words,
-                "prefix": prefix_clean
+                "prefix": prefix_clean,
             }
 
         else:
             # Режим полных названий
-            return {
-                "mode": "full",
-                "suggestions": full_names[:limit],
-                "prefix": prefix
-            }
-
-
-
+            return {"mode": "full", "suggestions": full_names[:limit], "prefix": prefix}

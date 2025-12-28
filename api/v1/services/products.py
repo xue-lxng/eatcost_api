@@ -2,10 +2,10 @@ import asyncio
 from typing import List
 
 import msgspec
-from config import logger
 
 from api.v1.response_models.products import CategoryProducts, Category
 from config import CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+from config import logger
 from core.caching.in_redis import AsyncRedisCache
 from core.utils.woocommerce import WooCommerceUtils
 
@@ -20,15 +20,15 @@ async def get_all_products(redis: AsyncRedisCache) -> List[CategoryProducts]:
     try:
         cached = await redis.get(cache_key, compressed=True)
         if cached is None:
-            async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
+            async with WooCommerceUtils(
+                CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+            ) as woocommerce:
                 categories = await woocommerce.get_categories()
                 tasks = [
                     woocommerce.get_products(category_id) for category_id in categories
                 ]
                 products = await asyncio.gather(*tasks)
-                cached = [
-                    item[0] for item in products
-                ]
+                cached = [item[0] for item in products]
             await redis.set(cache_key, cached, ttl=ttl, compress=True)
 
         # cached: List[Dict[str, Any]] -> List[CategoryProducts]
@@ -43,7 +43,10 @@ async def get_all_products(redis: AsyncRedisCache) -> List[CategoryProducts]:
         logger.error(f"Error fetching products: {e}")
     return result
 
-async def get_products_by_category(redis: AsyncRedisCache, category_id: str) -> List[CategoryProducts]:
+
+async def get_products_by_category(
+    redis: AsyncRedisCache, category_id: str
+) -> List[CategoryProducts]:
     """
     Возвращает список CategoryProducts для указанной категории.
     """
@@ -55,9 +58,12 @@ async def get_products_by_category(redis: AsyncRedisCache, category_id: str) -> 
             cached = []
             basic_page = 1
             while True:
-                async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
+                async with WooCommerceUtils(
+                    CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+                ) as woocommerce:
                     tasks = [
-                        woocommerce.get_products(category_id, page) for page in range(basic_page, basic_page + 10)
+                        woocommerce.get_products(category_id, page)
+                        for page in range(basic_page, basic_page + 10)
                     ]
                     products = await asyncio.gather(*tasks)
 
@@ -81,7 +87,9 @@ async def get_all_products_names(redis: AsyncRedisCache) -> List[str]:
         if cached:
             return cached
         data = []
-        async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
+        async with WooCommerceUtils(
+            CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+        ) as woocommerce:
             categories = await woocommerce.get_categories()
             for category in categories:
                 result = await get_products_by_category(redis, category)
@@ -106,8 +114,12 @@ async def get_categories(redis: AsyncRedisCache, parent_category_id: int = None)
         cached = await redis.get(cache_key, compressed=True)
         if cached:
             return cached
-        async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
-            cached = await woocommerce.get_categories(parent_category_id=parent_category_id, simplified=False)
+        async with WooCommerceUtils(
+            CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+        ) as woocommerce:
+            cached = await woocommerce.get_categories(
+                parent_category_id=parent_category_id, simplified=False
+            )
         await redis.set(cache_key, cached, ttl=ttl, compress=True)
 
         encoder = msgspec.json.Encoder()

@@ -1,7 +1,7 @@
 from datetime import datetime
+from typing import Optional
 
 import msgspec
-from typing import Optional
 
 
 class UserResponse(msgspec.Struct, omit_defaults=True):

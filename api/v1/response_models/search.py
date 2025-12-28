@@ -1,21 +1,25 @@
+from typing import Optional, List
+
 import msgspec
-from typing import Optional, List, Dict, Any
 
 
 class CategoryInfo(msgspec.Struct, omit_defaults=True):
     """Category information for products."""
+
     id: int
     name: str
 
 
 class AttributeInfo(msgspec.Struct, omit_defaults=True):
     """Product attribute information."""
+
     name: str
     options: List[str]
 
 
 class AggregatedProduct(msgspec.Struct, omit_defaults=True):
     """Aggregated product data from WooCommerce."""
+
     id: int
     name: str
     slug: str
@@ -40,6 +44,7 @@ class AggregatedProduct(msgspec.Struct, omit_defaults=True):
 
 class SearchResponse(msgspec.Struct, omit_defaults=True):
     """Response model for product search."""
+
     query: str
     count: int
     results: List[AggregatedProduct]
@@ -47,6 +52,7 @@ class SearchResponse(msgspec.Struct, omit_defaults=True):
 
 class AutocompleteSuggestion(msgspec.Struct, omit_defaults=True):
     """Single autocomplete suggestion item."""
+
     text: str
     display: str
     type: str  # "full" or "next_word"
@@ -54,6 +60,7 @@ class AutocompleteSuggestion(msgspec.Struct, omit_defaults=True):
 
 class AutocompleteResponse(msgspec.Struct, omit_defaults=True):
     """Response model for search autocomplete."""
+
     suggestions: List[AutocompleteSuggestion]
     query: str
     mode: str  # "full" or "next_word"

@@ -11,7 +11,9 @@ from core.utils.woocommerce import WooCommerceUtils
 
 async def get_app_products_periodically(redis: AsyncRedisCache) -> None:
     while True:
-        async with DistributedLock("task:get_all_products", skip_if_locked=True) as lock:
+        async with DistributedLock(
+            "task:get_all_products", skip_if_locked=True
+        ) as lock:
             if not lock.acquired:
                 await asyncio.sleep(1800)
                 continue
@@ -27,13 +29,19 @@ async def get_app_products_periodically(redis: AsyncRedisCache) -> None:
 
 async def get_products_by_category_periodically(redis: AsyncRedisCache) -> None:
     while True:
-        async with DistributedLock("task:get_products_by_category", skip_if_locked=True) as lock:
+        async with DistributedLock(
+            "task:get_products_by_category", skip_if_locked=True
+        ) as lock:
             if not lock.acquired:
                 await asyncio.sleep(1800)
                 continue
             try:
-                logger.info("Fetching products by category from API and caching them...")
-                async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as woocommerce:
+                logger.info(
+                    "Fetching products by category from API and caching them..."
+                )
+                async with WooCommerceUtils(
+                    CONSUMER_KEY, CONSUMER_SECRET, BASE_URL
+                ) as woocommerce:
                     categories = await woocommerce.get_categories()
                     for category in categories:
                         await get_products_by_category(redis, category)

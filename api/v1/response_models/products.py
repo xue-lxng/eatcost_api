@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 
 import msgspec
 
+
 class ProductAttribute(msgspec.Struct, omit_defaults=True):
     class AttributeTerms(msgspec.Struct, omit_defaults=True):
         id: int
@@ -40,6 +41,7 @@ class ProductItem(msgspec.Struct, omit_defaults=True):
     categories: List[Dict[str, Any]]
     images: List[str]
     attributes: List[ProductAttribute]
+
 
 class CategoryProducts(msgspec.Struct, omit_defaults=True):
     category_name: str

@@ -1,8 +1,9 @@
 import hashlib
 from typing import Dict, Any, List
-from config import logger
 
 import aiohttp
+
+from config import logger
 
 
 class TBankUtils:
@@ -27,6 +28,7 @@ class TBankUtils:
         """Fallback cleanup if context manager is not used."""
         if self.session and not self.session.closed:
             import asyncio
+
             try:
                 asyncio.run(self.session.close())
             except RuntimeError:
@@ -35,10 +37,9 @@ class TBankUtils:
     @staticmethod
     def generate_token(params: Dict[str, Any], password: str) -> str:
         filtered = {k: v for k, v in params.items() if not isinstance(v, (dict, list))}
-        filtered['Password'] = password
-        concatenated = ''.join(str(filtered[key]) for key in sorted(filtered))
-        return hashlib.sha256(concatenated.encode('utf-8')).hexdigest()
-
+        filtered["Password"] = password
+        concatenated = "".join(str(filtered[key]) for key in sorted(filtered))
+        return hashlib.sha256(concatenated.encode("utf-8")).hexdigest()
 
     async def add_card_to_user(self, user_id: str) -> Dict[str, str]:
         """
@@ -48,8 +49,8 @@ class TBankUtils:
         :return: Возвращает ссылку на привязку карты
         """
         params = {
-            'TerminalKey': self.terminal_id,
-            'CustomerKey': user_id,
+            "TerminalKey": self.terminal_id,
+            "CustomerKey": user_id,
             "CheckType": "NO",
         }
         token = self.generate_token(params, self.password)
@@ -64,9 +65,9 @@ class TBankUtils:
 
     async def remove_card_from_user(self, user_id: str, card_id: str) -> Dict[str, str]:
         params = {
-            'TerminalKey': self.terminal_id,
-            'CustomerKey': user_id,
-            'CardID': card_id,
+            "TerminalKey": self.terminal_id,
+            "CustomerKey": user_id,
+            "CardID": card_id,
             "CheckType": "NO",
         }
         token = self.generate_token(params, self.password)
@@ -79,7 +80,6 @@ class TBankUtils:
             result = await response.json()
             return {"success": result["Success"], "details": result["Details"]}
 
-
     @staticmethod
     def aggregate_cards(cards: list[dict]) -> list[dict]:
         return [
@@ -90,8 +90,8 @@ class TBankUtils:
 
     async def get_user_cards(self, user_id: str) -> List[Dict[str, str]]:
         params = {
-            'TerminalKey': self.terminal_id,
-            'CustomerKey': str(user_id),
+            "TerminalKey": self.terminal_id,
+            "CustomerKey": str(user_id),
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token
@@ -102,12 +102,14 @@ class TBankUtils:
             response.raise_for_status()
             result = await response.json()
             logger.info(f"Cards retrieved: {result}")
-            return self.aggregate_cards(result)  # Assuming the response contains a list of cards
+            return self.aggregate_cards(
+                result
+            )  # Assuming the response contains a list of cards
 
     async def create_customer(self, user_id: int):
         params = {
-            'TerminalKey': self.terminal_id,
-            'CustomerKey': str(user_id),
+            "TerminalKey": self.terminal_id,
+            "CustomerKey": str(user_id),
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token
@@ -119,5 +121,6 @@ class TBankUtils:
             response.raise_for_status()
             result = await response.json()
             logger.info(f"Customer created: {result}")
-            return {"customer_id": result["CustomerKey"]}  # Assuming the response contains a customer ID
-
+            return {
+                "customer_id": result["CustomerKey"]
+            }  # Assuming the response contains a customer ID

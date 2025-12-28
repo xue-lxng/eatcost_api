@@ -1,9 +1,12 @@
-from typing import Dict, Any, Optional
 from logging import getLogger
 
 import msgspec
 
-from api.v1.response_models.users import UserWithMembershipResponse, UserQrResponse, UserMembershipResponse
+from api.v1.response_models.users import (
+    UserWithMembershipResponse,
+    UserQrResponse,
+    UserMembershipResponse,
+)
 from config import CONSUMER_KEY, BASE_URL, CONSUMER_SECRET
 from core.utils.woocommerce import WooCommerceUtils
 
@@ -21,7 +24,11 @@ class UsersService:
             User details as a dictionary
         """
         try:
-            async with WooCommerceUtils(consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL) as woocommerce:
+            async with WooCommerceUtils(
+                consumer_key=CONSUMER_KEY,
+                consumer_secret=CONSUMER_SECRET,
+                base_url=BASE_URL,
+            ) as woocommerce:
                 user_data = await woocommerce.get_user_data(user_id=user_id)
                 user_membership = await woocommerce.get_user_membership(user_id=user_id)
                 user_data["membership"] = user_membership
@@ -40,8 +47,14 @@ class UsersService:
     @staticmethod
     async def get_user_qr(jwt_token: str) -> UserQrResponse:
         try:
-            async with WooCommerceUtils(consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL) as woocommerce:
-                user_membership_qr = await woocommerce.get_user_membership_qr(jwt_token=jwt_token)
+            async with WooCommerceUtils(
+                consumer_key=CONSUMER_KEY,
+                consumer_secret=CONSUMER_SECRET,
+                base_url=BASE_URL,
+            ) as woocommerce:
+                user_membership_qr = await woocommerce.get_user_membership_qr(
+                    jwt_token=jwt_token
+                )
                 encoder = msgspec.json.Encoder()
                 decoder = msgspec.json.Decoder(type=UserQrResponse)
 
@@ -61,7 +74,11 @@ class UsersService:
             Membership details
         """
         try:
-            async with WooCommerceUtils(consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL) as woocommerce:
+            async with WooCommerceUtils(
+                consumer_key=CONSUMER_KEY,
+                consumer_secret=CONSUMER_SECRET,
+                base_url=BASE_URL,
+            ) as woocommerce:
                 user_membership = await woocommerce.get_user_membership(user_id=user_id)
                 encoder = msgspec.json.Encoder()
                 decoder = msgspec.json.Decoder(type=UserMembershipResponse)

@@ -6,7 +6,6 @@ from loguru import logger
 
 dotenv.load_dotenv()
 
-
 logger.remove()  # Remove default handler
 
 # Add only console handler

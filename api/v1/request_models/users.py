@@ -1,5 +1,6 @@
-import msgspec
 from typing import Optional
+
+import msgspec
 
 
 class UserUpdateRequest(msgspec.Struct, omit_defaults=True):

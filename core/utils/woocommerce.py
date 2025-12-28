@@ -1,9 +1,9 @@
 import asyncio
 from typing import List, Dict, Any, Union
+from urllib.parse import unquote
 
 import aiohttp
-from aiohttp import ClientError, ClientResponseError
-from urllib.parse import unquote
+from aiohttp import ClientResponseError
 
 from config import AUTH_KEY, logger
 
@@ -32,6 +32,7 @@ class WooCommerceUtils:
         """Fallback cleanup if context manager is not used."""
         if self.session and not self.session.closed:
             import asyncio
+
             try:
                 asyncio.run(self.session.close())
             except RuntimeError:
@@ -45,7 +46,9 @@ class WooCommerceUtils:
             case list():
                 return [self._decode_str_fields(item) for item in data]
             case dict():
-                return {key: self._decode_str_fields(value) for key, value in data.items()}
+                return {
+                    key: self._decode_str_fields(value) for key, value in data.items()
+                }
             case _:
                 return data
 
@@ -61,7 +64,9 @@ class WooCommerceUtils:
 
     def _get_price(self, raw_value: Any, fallback: float) -> float:
         """Get price value, using fallback if empty."""
-        return fallback if raw_value in ("", None) else self._to_float(raw_value, fallback)
+        return (
+            fallback if raw_value in ("", None) else self._to_float(raw_value, fallback)
+        )
 
     def aggregate_product_data(self, product: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -127,7 +132,7 @@ class WooCommerceUtils:
             async with self.session.get(
                 f"{self.base_url}/wp-json/wc/store/v1/products",
                 params={"per_page": 100, "category": category_id, "page": page},
-                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
             ) as response:
                 response.raise_for_status()
                 raw_products = await response.json() if response.status == 200 else []
@@ -157,7 +162,9 @@ class WooCommerceUtils:
                         for cat in categories:
                             cat_id = cat.get("id")
                             if cat_id is None:
-                                logger.warning(f"Product {product.get('id')} has category with no ID")
+                                logger.warning(
+                                    f"Product {product.get('id')} has category with no ID"
+                                )
                                 continue
 
                             cat_name = cat.get("name") or f"category_{cat_id}"
@@ -170,7 +177,9 @@ class WooCommerceUtils:
 
                             categories_map[cat_id]["items"].append(simplified)
                 except Exception as e:
-                    logger.error(f"Error processing product {product.get('id')}: {str(e)}")
+                    logger.error(
+                        f"Error processing product {product.get('id')}: {str(e)}"
+                    )
                     continue
 
             result = [
@@ -191,7 +200,7 @@ class WooCommerceUtils:
             logger.error(f"Unexpected error fetching products: {str(e)}")
             raise ValueError(f"Failed to fetch products: {str(e)}")
 
-    async def search_products(self, search_query: str, page: int=1):
+    async def search_products(self, search_query: str, page: int = 1):
         """
         Search products by query.
 
@@ -218,7 +227,7 @@ class WooCommerceUtils:
             async with self.session.get(
                 f"{self.base_url}/wp-json/wc/store/v1/products",
                 params={"per_page": 100, "search": search_query, "page": page},
-                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
             ) as response:
                 response.raise_for_status()
                 response_result = await response.json()
@@ -226,8 +235,12 @@ class WooCommerceUtils:
                 if response.status != 200:
                     logger.warning(f"Search returned status {response.status}")
                     return []
-                products = [self.aggregate_product_data(product) for product in response_result]
-                logger.info(f"Found {len(products)} products matching query: {search_query}")
+                products = [
+                    self.aggregate_product_data(product) for product in response_result
+                ]
+                logger.info(
+                    f"Found {len(products)} products matching query: {search_query}"
+                )
                 return products
 
         except ClientResponseError as e:
@@ -237,11 +250,22 @@ class WooCommerceUtils:
             logger.error(f"Unexpected error searching products: {str(e)}")
             raise ValueError(f"Failed to search products: {str(e)}")
 
-    async def request_categories(self, page: int, parent_category_id: int = None) -> List[str]:
+    async def request_categories(
+        self, page: int, parent_category_id: int = None
+    ) -> List[str]:
         async with self.session.get(
-                f"{self.base_url}/wp-json/wc/v3/products/categories",
-                params={"per_page": 100, "page": page, "hide_empty": "true"} if parent_category_id is None else {"parent": int(parent_category_id), "per_page": 100, "page": page, "hide_empty": "true"},
-                auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+            f"{self.base_url}/wp-json/wc/v3/products/categories",
+            params=(
+                {"per_page": 100, "page": page, "hide_empty": "true"}
+                if parent_category_id is None
+                else {
+                    "parent": int(parent_category_id),
+                    "per_page": 100,
+                    "page": page,
+                    "hide_empty": "true",
+                }
+            ),
+            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
         ) as response:
             response.raise_for_status()
             result = await response.json()
@@ -251,8 +275,9 @@ class WooCommerceUtils:
 
             return result
 
-
-    async def get_categories(self, simplified: bool = True, parent_category_id: int = None) -> List[str]:
+    async def get_categories(
+        self, simplified: bool = True, parent_category_id: int = None
+    ) -> List[str]:
         """
         Fetch all product categories.
 
@@ -273,22 +298,17 @@ class WooCommerceUtils:
 
         try:
             tasks = [
-                self.request_categories(page, parent_category_id) for page in range(1, 11)
+                self.request_categories(page, parent_category_id)
+                for page in range(1, 11)
             ]
-            result = await asyncio.gather(
-                *tasks
-            )
-
+            result = await asyncio.gather(*tasks)
 
             categories = []
             for cat in result:
                 categories.extend(cat)
 
-
             if simplified:
-                categories_formatted = [
-                    item.get("id") for item in categories
-                ]
+                categories_formatted = [item.get("id") for item in categories]
             else:
                 categories_formatted = [
                     {
@@ -301,7 +321,9 @@ class WooCommerceUtils:
             return categories_formatted
 
         except ClientResponseError as e:
-            logger.error(f"WooCommerce API error (categories): {e.status} - {e.message}")
+            logger.error(
+                f"WooCommerce API error (categories): {e.status} - {e.message}"
+            )
             raise
         except Exception as e:
             logger.error(f"Unexpected error fetching categories: {str(e)}")
@@ -341,11 +363,17 @@ class WooCommerceUtils:
                     return {"jwt": result.get("jwt")}
                 else:
                     error_text = await response.text()
-                    logger.error(f"Registration failed for {email}: {response.status} - {error_text}")
-                    raise ValueError(f"Registration failed: {response.status} - {error_text}")
+                    logger.error(
+                        f"Registration failed for {email}: {response.status} - {error_text}"
+                    )
+                    raise ValueError(
+                        f"Registration failed: {response.status} - {error_text}"
+                    )
 
         except ClientResponseError as e:
-            logger.error(f"WooCommerce API error (registration): {e.status} - {e.message}")
+            logger.error(
+                f"WooCommerce API error (registration): {e.status} - {e.message}"
+            )
             raise
         except Exception as e:
             logger.error(f"Unexpected error registering user {email}: {str(e)}")
@@ -380,7 +408,7 @@ class WooCommerceUtils:
                 data={
                     "email": email,
                     "password": password,
-                }
+                },
             ) as response:
 
                 if response.status == 200:
@@ -390,12 +418,18 @@ class WooCommerceUtils:
                         logger.info(f"User authenticated successfully: {email}")
                         return {"jwt": jwt_token}
                     else:
-                        logger.error(f"Login failed for {email}: No JWT token in response")
+                        logger.error(
+                            f"Login failed for {email}: No JWT token in response"
+                        )
                         raise ValueError("Authentication failed: No JWT token returned")
                 else:
                     error_text = await response.text()
-                    logger.error(f"Authentication failed for {email}: {response.status} - {error_text}")
-                    raise ValueError(f"Authentication failed: {response.status} - {error_text}")
+                    logger.error(
+                        f"Authentication failed for {email}: {response.status} - {error_text}"
+                    )
+                    raise ValueError(
+                        f"Authentication failed: {response.status} - {error_text}"
+                    )
 
         except ClientResponseError as e:
             logger.error(f"WooCommerce API error (login): {e.status} - {e.message}")
@@ -403,7 +437,6 @@ class WooCommerceUtils:
         except Exception as e:
             logger.error(f"Unexpected error authenticating user {email}: {str(e)}")
             raise ValueError(f"Failed to authenticate user: {str(e)}")
-
 
     async def refresh_token(self, jwt_token: str) -> str:
         if not self.session:
@@ -413,12 +446,11 @@ class WooCommerceUtils:
 
         async with self.session.post(
             f"{self.base_url}/?rest_route=/simple-jwt-login/v1/token/refresh",
-                headers={"Authorization": jwt_token}
-            ) as response:
+            headers={"Authorization": jwt_token},
+        ) as response:
             response.raise_for_status()
             result = await response.json()
             return result.get("data", {}).get("jwt")
-
 
     async def reset_password(self, jwt_token: str, email: str, password: str) -> bool:
         if not self.session:
@@ -428,19 +460,17 @@ class WooCommerceUtils:
 
         async with self.session.put(
             f"{self.base_url}/?api-proxy.php?endpoint=simple-jwt-login/v1/user/reset_password",
-                headers={"Authorization": jwt_token},
-                json={
-                    "email": email,
-                    "new_password": password,
-                    "AUTH_KEY": AUTH_KEY
-                }
-            ) as response:
+            headers={"Authorization": jwt_token},
+            json={"email": email, "new_password": password, "AUTH_KEY": AUTH_KEY},
+        ) as response:
             response.raise_for_status()
             result = await response.json()
-            if result.get("success") and result.get("message") == "User Password has been changed.":
+            if (
+                result.get("success")
+                and result.get("message") == "User Password has been changed."
+            ):
                 return True
             return False
-
 
     def format_cart(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Format WooCommerce Store API cart into a minimal structure.
@@ -464,50 +494,54 @@ class WooCommerceUtils:
                 prices = item.get("prices") or {}
                 line_totals = item.get("totals") or {}
 
-                items.append({
-                    "key": item.get("key"),
-                    "id": item.get("id"),
-                    # Optional but useful
-                    "name": item.get("name"),
-                    "quantity": item.get("quantity"),
-                    "type": item.get("type"),
-                    "sku": item.get("sku"),
-                    "permalink": item.get("permalink"),
-                    "image": image_src,
-                    # Prices
-                    "price": prices.get("price"),
-                    "regular_price": prices.get("regular_price"),
-                    "sale_price": prices.get("sale_price"),
-                    # Line totals
-                    "line_total": line_totals.get("line_total"),
-                })
+                items.append(
+                    {
+                        "key": item.get("key"),
+                        "id": item.get("id"),
+                        # Optional but useful
+                        "name": item.get("name"),
+                        "quantity": item.get("quantity"),
+                        "type": item.get("type"),
+                        "sku": item.get("sku"),
+                        "permalink": item.get("permalink"),
+                        "image": image_src,
+                        # Prices
+                        "price": prices.get("price"),
+                        "regular_price": prices.get("regular_price"),
+                        "sale_price": prices.get("sale_price"),
+                        # Line totals
+                        "line_total": line_totals.get("line_total"),
+                    }
+                )
 
             totals = data.get("totals") or {}
 
             # Simplify shipping packages and rates
             simplified_packages: List[Dict[str, Any]] = []
             for pkg in data.get("shipping_rates", []) or []:
-                simplified_packages.append({
-                    "package_id": pkg.get("package_id"),
-                    "name": pkg.get("name"),
-                    "items": [
-                        {
-                            "key": i.get("key"),
-                            "name": i.get("name"),
-                            "quantity": i.get("quantity"),
-                        }
-                        for i in (pkg.get("items") or [])
-                    ],
-                    "shipping_rates": [
-                        {
-                            "rate_id": r.get("rate_id"),
-                            "name": r.get("name"),
-                            "price": r.get("price"),
-                            "selected": r.get("selected"),
-                        }
-                        for r in (pkg.get("shipping_rates") or [])
-                    ],
-                })
+                simplified_packages.append(
+                    {
+                        "package_id": pkg.get("package_id"),
+                        "name": pkg.get("name"),
+                        "items": [
+                            {
+                                "key": i.get("key"),
+                                "name": i.get("name"),
+                                "quantity": i.get("quantity"),
+                            }
+                            for i in (pkg.get("items") or [])
+                        ],
+                        "shipping_rates": [
+                            {
+                                "rate_id": r.get("rate_id"),
+                                "name": r.get("name"),
+                                "price": r.get("price"),
+                                "selected": r.get("selected"),
+                            }
+                            for r in (pkg.get("shipping_rates") or [])
+                        ],
+                    }
+                )
 
             formatted: Dict[str, Any] = {
                 "items": items,
@@ -540,7 +574,7 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
         async with self.session.get(
             f"{self.base_url}/wp-json/wc/store/v1/cart",
-            headers={"Authorization": jwt_token}
+            headers={"Authorization": jwt_token},
         ) as response:
             response.raise_for_status()
             data = await response.json()
@@ -548,15 +582,21 @@ class WooCommerceUtils:
             cart_token = response.headers.get("Cart-Token")
             return {"items": self.format_cart(data), "cart_token": cart_token}
 
-    async def add_item_to_cart(self, cart_token: str, product_id: int, quantity: int, jwt_token: str):
+    async def add_item_to_cart(
+        self, cart_token: str, product_id: int, quantity: int, jwt_token: str
+    ):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         async with self.session.post(
             f"{self.base_url}/api-proxy.php?endpoint=wc/store/v1/cart/items",
-            json={"id":str(product_id),"quantity":quantity, "cart_token": cart_token },
-            headers={"Authorization": jwt_token}
+            json={
+                "id": str(product_id),
+                "quantity": quantity,
+                "cart_token": cart_token,
+            },
+            headers={"Authorization": jwt_token},
         ) as response:
             logger.info(await response.json())
             response.raise_for_status()
@@ -564,8 +604,9 @@ class WooCommerceUtils:
             status = response.status
             return {"status": status, "data": data}
 
-
-    async def update_item_in_cart(self, cart_token: str, item_key: str, quantity: int, jwt_token: str):
+    async def update_item_in_cart(
+        self, cart_token: str, item_key: str, quantity: int, jwt_token: str
+    ):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
@@ -576,7 +617,7 @@ class WooCommerceUtils:
             params={
                 "key": item_key,
                 "quantity": quantity,
-            }
+            },
         ) as response:
             logger.info(await response.json())
             response.raise_for_status()
@@ -584,8 +625,9 @@ class WooCommerceUtils:
             status = response.status
             return {"status": status, "data": data}
 
-
-    async def delete_item_from_cart(self, cart_token: str, item_key: str, jwt_token: str):
+    async def delete_item_from_cart(
+        self, cart_token: str, item_key: str, jwt_token: str
+    ):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
@@ -595,13 +637,12 @@ class WooCommerceUtils:
             headers={"Cart-Token": cart_token, "Authorization": jwt_token},
             params={
                 "key": item_key,
-            }
+            },
         ) as response:
             response.raise_for_status()
             data = await response.json()
             status = response.status
             return {"status": status, "data": data}
-
 
     @staticmethod
     def aggregate_user_data(user: Dict[str, Any]) -> Dict[str, Any]:
@@ -618,7 +659,6 @@ class WooCommerceUtils:
         }
         return user_data
 
-
     async def get_user_data(self, user_id: int) -> Dict[str, Any]:
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
@@ -626,12 +666,11 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
         async with self.session.get(
             f"{self.base_url}/wp-json/wc/v3/customers/{user_id}",
-            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
         ) as response:
             response.raise_for_status()
             result = await response.json()
             return self.aggregate_user_data(result)
-
 
     async def get_user_membership(self, user_id: int):
         if not self.session:
@@ -641,13 +680,16 @@ class WooCommerceUtils:
         async with self.session.get(
             f"{self.base_url}/wp-json/wc/v3/memberships/members",
             params={"customer": user_id},
-            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret)
+            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
         ) as response:
             response.raise_for_status()
             result = await response.json()
             user = result[0] if result else {}
-            return {"plan_name": user.get("plan_name"), "status": user.get("status"), "end_date": user.get("end_date_gmt")}
-
+            return {
+                "plan_name": user.get("plan_name"),
+                "status": user.get("status"),
+                "end_date": user.get("end_date_gmt"),
+            }
 
     async def get_user_membership_qr(self, jwt_token: str):
         if not self.session:
@@ -656,11 +698,15 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
         async with self.session.get(
             f"{self.base_url}/wp-json/mqrv/v1/qr-code",
-            headers={"Authorization": jwt_token}
+            headers={"Authorization": jwt_token},
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            return {"qr_code": result.get("qr_code"), "timestamp": result.get("timestamp"), "lifetime": result.get("lifetime")}
+            return {
+                "qr_code": result.get("qr_code"),
+                "timestamp": result.get("timestamp"),
+                "lifetime": result.get("lifetime"),
+            }
 
     async def reset_user_password(self, jwt_token: str, email: str, new_password: str):
         if not self.session:
@@ -669,14 +715,16 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
         async with self.session.get(
             f"{self.base_url}/?rest_route=/simple-jwt-login/v1/user/reset_password&email={email}&new_password={new_password}&AUTH_KEY={AUTH_KEY}",
-            headers={"Authorization": jwt_token}
+            headers={"Authorization": jwt_token},
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            if result.get("success") and result.get("message") == "User Password has been changed.":
+            if (
+                result.get("success")
+                and result.get("message") == "User Password has been changed."
+            ):
                 return True
             return False
-
 
     async def close(self):
         """Manually close the session (optional if using context manager)."""

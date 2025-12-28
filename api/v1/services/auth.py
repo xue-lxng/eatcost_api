@@ -3,15 +3,24 @@ from typing import Dict, Any
 import jwt
 
 from api.v1.response_models.auth import AuthResponse, ErrorResponse
+from config import (
+    CONSUMER_KEY,
+    CONSUMER_SECRET,
+    BASE_URL,
+    logger,
+    JWT_SECRET,
+    JWT_ALGORITHM,
+)
 from core.utils.woocommerce import WooCommerceUtils
-from config import CONSUMER_KEY, CONSUMER_SECRET, BASE_URL, logger, JWT_SECRET, JWT_ALGORITHM
 
 
 class AuthService:
     """Authentication service for user registration and login."""
 
     @staticmethod
-    async def register_user(email: str, password: str, username: str = None) -> Dict[str, Any]:
+    async def register_user(
+        email: str, password: str, username: str = None
+    ) -> Dict[str, Any]:
         """
         Register a new user using WooCommerce Simple JWT Login.
 
@@ -33,7 +42,9 @@ class AuthService:
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as wc:
                 result = await wc.register_user(email, password)
                 if result and result.get("jwt"):
-                    logger.info(f"AuthService: User registered successfully - Email: {email}")
+                    logger.info(
+                        f"AuthService: User registered successfully - Email: {email}"
+                    )
                     return result
                 else:
                     error_msg = "Registration failed: WooCommerce returned no result"
@@ -75,7 +86,9 @@ class AuthService:
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as wc:
                 result = await wc.login_user(email, password)
                 if result and result.get("jwt"):
-                    logger.info(f"AuthService: User authenticated successfully - Email: {email}")
+                    logger.info(
+                        f"AuthService: User authenticated successfully - Email: {email}"
+                    )
                     return result
                 else:
                     error_msg = "Authentication failed: Invalid credentials or no JWT token returned"
@@ -167,7 +180,9 @@ class AuthService:
             async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as wc:
                 result = await wc.reset_password(jwt_token, email, password)
                 if result:
-                    logger.info(f"AuthService: Password reset successful - Email: {email}")
+                    logger.info(
+                        f"AuthService: Password reset successful - Email: {email}"
+                    )
                     return result
                 else:
                     error_msg = "Password reset failed: WooCommerce returned no success"

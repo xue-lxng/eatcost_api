@@ -1,24 +1,23 @@
-from typing import Any
-
 from litestar import Router, get
 from litestar.params import Parameter
 
 from api.v1.response_models.products import CategoryProducts, Category
 from api.v1.response_models.search import SearchResponse, AutocompleteResponse
-from api.v1.services.products import get_all_products, get_products_by_category, get_categories
+from api.v1.services.products import (
+    get_all_products,
+    get_products_by_category,
+    get_categories,
+)
 from api.v1.services.search import search_products_service, search_autocomplete_service
 from core.caching.in_redis import AsyncRedisCache
-from core.utils.woocommerce import WooCommerceUtils
 
 
 @get("/search-autocomplete", tags=["Search"])
 async def search_autocomplete(
     redis: AsyncRedisCache,
     search_query: str = Parameter(
-        title="query",
-        description="Поисковый запрос",
-        query="query"
-    )
+        title="query", description="Поисковый запрос", query="query"
+    ),
 ) -> AutocompleteResponse:
     """Retrieve autocomplete suggestions for a given search query.
 
@@ -34,7 +33,7 @@ async def search_autocomplete(
         suggestions=result["suggestions"],
         query=result.get("prefix", search_query),
         mode=result.get("mode", "full"),
-        prefix=result.get("prefix", "")
+        prefix=result.get("prefix", ""),
     )
 
 
@@ -56,20 +55,19 @@ async def search_products(
     """
     normalized_query = search_query.lower().strip()
     results = await search_products_service(normalized_query, redis)
-    return SearchResponse(
-        query=normalized_query,
-        count=len(results),
-        results=results
-    )
+    return SearchResponse(query=normalized_query, count=len(results), results=results)
 
 
 @get("/category", tags=["Products"])
-async def get_category(redis: AsyncRedisCache, parent_category_id: str | None = Parameter(
+async def get_category(
+    redis: AsyncRedisCache,
+    parent_category_id: str | None = Parameter(
         title="parent_category_id",
         description="Идентификатор родительской категории",
         query="parent_category_id",
         required=False,
-    ),) -> list[Category]:
+    ),
+) -> list[Category]:
     """Retrieve a list of categories from the cache."""
     return await get_categories(redis, parent_category_id=parent_category_id)
 
@@ -92,4 +90,7 @@ async def get_products(
     )
 
 
-router = Router(path="/products", route_handlers=[search_products, get_products, search_autocomplete, get_category])
+router = Router(
+    path="/products",
+    route_handlers=[search_products, get_products, search_autocomplete, get_category],
+)

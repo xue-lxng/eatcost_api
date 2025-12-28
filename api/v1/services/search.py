@@ -40,12 +40,13 @@ def aggregate_product_data(product: dict[str, Any]) -> AggregatedProduct:
         Словарь с агрегированными данными продукта
     """
     # Получаем первое изображение или None
-    first_image = product.get("images", [{}])[0].get("src") if product.get("images") else None
+    first_image = (
+        product.get("images", [{}])[0].get("src") if product.get("images") else None
+    )
 
     # Получаем категории
     categories = [
-        {"id": cat["id"], "name": cat["name"]} 
-        for cat in product.get("categories", [])
+        {"id": cat["id"], "name": cat["name"]} for cat in product.get("categories", [])
     ]
 
     # Получаем атрибуты (для вариативных товаров)
@@ -56,7 +57,9 @@ def aggregate_product_data(product: dict[str, Any]) -> AggregatedProduct:
 
     # Обработка цены продажи с учетом пустой строки
     sale_price = product.get("sale_price", "")
-    sale_price = float(sale_price) if sale_price else float(product.get("regular_price", 0))
+    sale_price = (
+        float(sale_price) if sale_price else float(product.get("regular_price", 0))
+    )
 
     return {
         "id": product.get("id"),
@@ -116,7 +119,9 @@ async def search_products_service(
     cached_result = await redis.get(cache_key, compressed=True)
     if cached_result is not None:
         return cached_result
-    async with WooCommerceUtils(consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL) as woocommerce:
+    async with WooCommerceUtils(
+        consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, base_url=BASE_URL
+    ) as woocommerce:
         products_data = await woocommerce.search_products(query)
 
     await redis.set(cache_key, products_data, ttl=ttl, tags=[cache_tag], compress=True)
@@ -125,16 +130,16 @@ async def search_products_service(
 
 
 async def search_autocomplete_service(
-        redis: AsyncRedisCache, search_query: str
+    redis: AsyncRedisCache, search_query: str
 ) -> dict:
     """
     Provide search autocomplete suggestions from Redis cache.
-    
+
     Args:
         redis: AsyncRedisCache instance for accessing cached autocomplete data
         woocommerce: WooCommerceUtils instance
         search_query: User's search input string
-        
+
     Returns:
         Dictionary with suggestions list containing text, display, and type fields
     """
@@ -143,9 +148,7 @@ async def search_autocomplete_service(
             return {"suggestions": []}
 
         result = await redis.search_with_word_completion(
-            "autocomplete:products",
-            search_query,
-            limit=10
+            "autocomplete:products", search_query, limit=10
         )
 
         suggestions = result["suggestions"]
@@ -153,21 +156,12 @@ async def search_autocomplete_service(
         if result["mode"] == "next_word":
             next_words = result.get("next_words_only", [])
             formatted_suggestions = [
-                {
-                    "text": text,
-                    "display": word,
-                    "type": "next_word"
-                }
+                {"text": text, "display": word, "type": "next_word"}
                 for text, word in zip(suggestions, next_words)
             ]
         else:
             formatted_suggestions = [
-                {
-                    "text": text,
-                    "display": text,
-                    "type": "full"
-                }
-                for text in suggestions
+                {"text": text, "display": text, "type": "full"} for text in suggestions
             ]
 
         return {"suggestions": formatted_suggestions}

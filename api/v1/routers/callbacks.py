@@ -27,6 +27,8 @@ async def callback(
         logger.critical(f"Fake callback from {ip}")
         raise HTTPException(status_code=403, detail="Invalid TerminalKey")
 
+    logger.info(f"Callback received from {ip} with data: {data}")
+
     order_id = data.get("OrderId")
     status = data.get("Status")
     success = data.get("Success")

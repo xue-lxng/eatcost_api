@@ -1,5 +1,5 @@
 # Stage 1: Builder stage - installs dependencies and packages the application
-FROM python:3.11-slim as builder
+FROM python:3.13-apline as builder
 
 # Set working directory
 WORKDIR /app

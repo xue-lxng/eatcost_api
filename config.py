@@ -24,5 +24,7 @@ REDIS_URL = os.getenv("REDIS_URL")
 AUTH_KEY = os.getenv("AUTH_KEY")
 TERMINAL_ID = os.getenv("TERMINAL_ID")
 TERMINAL_PASSWORD = os.getenv("TERMINAL_PASSWORD")
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 Path("logs").mkdir(exist_ok=True)

@@ -14,7 +14,7 @@ from api.v1.response_models.users import (
     UserWithMembershipResponse,
     UserQrResponse as UserQrResponseModel,
     UserMembershipResponse,
-    CardOutput,
+    CardOutput, UserMembershipPurchaseResponse,
 )
 from api.v1.services.auth import AuthService
 from api.v1.services.cards import CardsService
@@ -80,6 +80,29 @@ async def update_current_user_profile(
 async def get_user_membership(
     request: Request,
 ) -> UserMembershipResponse:
+    """
+    Get user membership details
+    """
+    jwt_token = request.headers.get("Authorization", None)
+    if jwt_token is None:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+    if "Bearer " not in jwt_token:
+        raise HTTPException(
+            status_code=401, detail="Invalid authorization token format"
+        )
+    try:
+        user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
+        user_id = user.get("id")
+
+        membership_data = await UsersService.get_user_membership(user_id)
+        return membership_data
+    except Exception as e:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=str(e))
+
+@post("/membership", status_code=HTTP_200_OK)
+async def buy_user_membership(
+    request: Request,
+) -> UserMembershipPurchaseResponse:
     """
     Get user membership details
     """

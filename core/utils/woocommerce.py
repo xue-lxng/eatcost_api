@@ -16,6 +16,7 @@ class WooCommerceUtils:
         self.consumer_secret = consumer_secret
         self.base_url = base_url
         self.session: aiohttp.ClientSession | None = None
+        self.subscription_item_id: int = 10397
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -462,7 +463,7 @@ class WooCommerceUtils:
             raise RuntimeError(error_msg)
 
         async with self.session.put(
-            f"{self.base_url}/?api-proxy.php?endpoint=simple-jwt-login/v1/user/reset_password",
+            f"{self.base_url}/api-proxy.php?endpoint=simple-jwt-login/v1/user/reset_password",
             headers={"Authorization": jwt_token},
             json={"email": email, "new_password": password, "AUTH_KEY": AUTH_KEY},
         ) as response:
@@ -581,7 +582,6 @@ class WooCommerceUtils:
         ) as response:
             response.raise_for_status()
             data = await response.json()
-            logger.info(f"JWT Token: {jwt_token}")
             cart_token = response.headers.get("Cart-Token")
             return {"items": self.format_cart(data), "cart_token": cart_token}
 
@@ -646,6 +646,76 @@ class WooCommerceUtils:
             data = await response.json()
             status = response.status
             return {"status": status, "data": data}
+
+
+    async def create_subscription(self, jwt_token: str, user_id: int):
+        if not self.session:
+            error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+
+        user_data = await self.get_user_data(user_id)
+
+        data = {
+            "payment_method": "tbank",
+            "payment_method_title": "TBank",
+            "set_paid": False,
+            "billing_address": {
+                "first_name": user_data.get("first_name"),
+                "last_name": user_data.get("last_name"),
+                "address_1": user_data.get("address_1"),
+                "address_2": "",
+                "city": "Новосибирск",
+                "state": "Новосибирская область",
+                "postcode": "630001",
+                "country": "RU",
+                "email": user_data.get("email"),
+            },
+            "line_items": [
+                {
+                    "product_id": self.subscription_item_id,
+                    "quantity": 1
+                },
+            ],
+            "shipping_lines": [
+                {
+                    "method_id": "free_delivery",
+                    "method_title": "Бесплатная доставка",
+                    "total": "0"
+                }
+            ]
+        }
+
+        async with self.session.post(
+            f"{self.base_url}/wp-json/wc/v3/orders",
+            headers={"Authorization": jwt_token},
+            json=data,
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+            status = response.status
+            return {"status": status, "data": data}
+
+    async def change_order_status(
+            self,
+            order_id: int,
+            new_status: str,
+            jwt_token: str
+    ):
+        if not self.session:
+            error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        async with self.session.put(
+                f"{self.base_url}/api-proxy.php?endpoint=wc/v3/orders/{order_id}",
+                headers={"Authorization": jwt_token},
+                json={
+                    "status": new_status,
+                },
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+            return {"status": data.get("status")}
 
     @staticmethod
     def aggregate_user_data(user: Dict[str, Any]) -> Dict[str, Any]:

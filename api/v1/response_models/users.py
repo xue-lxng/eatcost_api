@@ -17,6 +17,10 @@ class UserMembershipResponse(msgspec.Struct, omit_defaults=True):
     end_date: datetime
 
 
+class UserMembershipPurchaseResponse(msgspec.Struct, omit_defaults=True):
+    payment_url: str
+
+
 class UserWithMembershipResponse(UserResponse):
     membership: Optional[UserMembershipResponse]
 

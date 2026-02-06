@@ -124,3 +124,40 @@ class TBankUtils:
             return {
                 "customer_id": result["CustomerKey"]
             }  # Assuming the response contains a customer ID
+
+
+    async def create_subscription(self, user_id: int, order_id: str, amount: float) -> str:
+        params = {
+            "TerminalKey": self.terminal_id,
+            "CustomerKey": str(user_id),
+            "OrderID": order_id,
+            "Amount": amount,
+            "Recurrent": "Y",
+            "NotificationURL": "https://eatcost.ru/api/v1/callbacks",
+        }
+        token = self.generate_token(params, self.password)
+        params["Token"] = token
+        async with self.session.post(
+            f"{self.base_url}/v2/Init",
+            json=params,
+        ) as response:
+            response.raise_for_status()
+            result = await response.json()
+            logger.info(f"Subscription created: {result}")
+            return result["PaymentURL"]
+
+
+    async def check_order_status(self, order_id: str) -> Dict[str, str]:
+        params = {
+            "TerminalKey": self.terminal_id,
+            "OrderID": order_id,
+        }
+        token = self.generate_token(params, self.password)
+        params["Token"] = token
+        async with self.session.post(
+            f"{self.base_url}/v2/CheckOrder",
+            json=params,
+        ) as response:
+            response.raise_for_status()
+            result = await response.json()
+            return result

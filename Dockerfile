@@ -1,5 +1,5 @@
 # Stage 1: Builder stage - installs dependencies and packages the application
-FROM python:3.13-alpine as builder
+FROM python:3.13-slim as builder
 
 # Set working directory
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Production stage - smaller and optimized
-FROM python:3.13-alpine as production
+FROM python:3.13-slim as production
 
 # Set working directory
 WORKDIR /app

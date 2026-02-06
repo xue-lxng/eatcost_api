@@ -150,7 +150,7 @@ class TBankUtils:
     async def check_order_status(self, order_id: str) -> Dict[str, str]:
         params = {
             "TerminalKey": self.terminal_id,
-            "OrderID": order_id,
+            "OrderId": order_id,
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token

@@ -38,6 +38,10 @@ async def callback(
         logger.error(f"Failed order {order_id} with status {status}")
         raise HTTPException(status_code=200, detail="Failed order")
 
+    if status == "AUTHORIZED":
+        logger.info(f"Order {order_id} authorized")
+        return {"status": "success"}
+
     asyncio.create_task(
         PaymentService.confirm_order_payment(
             order_id=order_id,
@@ -45,6 +49,7 @@ async def callback(
             rebill_id=rebill_id,
         )
     )
+
     return {"status": "success"}
 
 

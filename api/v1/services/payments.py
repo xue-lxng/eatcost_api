@@ -1,5 +1,6 @@
 from typing import Optional
 
+from api.v1.services.subscriptions import send_subscription_data
 from api.v1.services.users import logger
 from config import TERMINAL_ID, TERMINAL_PASSWORD, CONSUMER_KEY, CONSUMER_SECRET, BASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD
 from core.caching.in_redis import AsyncRedisCache
@@ -45,11 +46,14 @@ class PaymentService:
                     email=ADMIN_EMAIL,
                     password=ADMIN_PASSWORD
                 )
+                order_data = await wc.get_order_data(order_id)
                 await wc.change_order_status(order_id, status_map.get(callback_status), jwt_token.get("jwt"))
 
             if rebill_id:
-                #TODO: implement rebill logic
-                pass
+                await send_subscription_data(
+                    user_id=order_data.get("customer_id"),
+                    rebill=rebill_id
+                )
 
         except Exception as e:
             logger.error(f"Error confirming order payment: {e}")

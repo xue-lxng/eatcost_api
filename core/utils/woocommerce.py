@@ -696,6 +696,19 @@ class WooCommerceUtils:
             status = response.status
             return {"status": status, "data": data}
 
+    async def get_order_data(self, order_id: int):
+        if not self.session:
+            error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        async with self.session.get(
+            f"{self.base_url}/wp-json/wc/v3/orders/{order_id}",
+            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+        ) as response:
+            response.raise_for_status()
+            result = await response.json()
+            return result
+
     async def change_order_status(
             self,
             order_id: int,

@@ -4,7 +4,7 @@ services:
   # Main API Service
   app:
     build:
-      context: .
+      context: ./main_api
       dockerfile: Dockerfile
       target: production
     container_name: woocommerce-api
@@ -54,6 +54,31 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  postgres:
+    image: postgres:16.1-alpine
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "7000:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  subscription_api:
+    build: ./subscription_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
 
 volumes:
   redis_data:

@@ -98,9 +98,11 @@ class PaymentService:
                 jwt_token = await wc.login_user(
                     email=ADMIN_EMAIL, password=ADMIN_PASSWORD
                 )
-                order_data = await wc.activate_after_payment(order_id)
-                await wc.change_order_status(
-                    order_id, status_map.get(callback_status), jwt_token.get("jwt")
+                order_data = await wc.get_order_data(order_id)
+                subscription_id = int(order_id) + 1
+                await wc.activate_after_payment(
+                    order_id,
+                    subscription_id,
                 )
 
             if rebill_id:

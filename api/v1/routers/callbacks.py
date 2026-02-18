@@ -17,7 +17,9 @@ from core.caching.in_redis import AsyncRedisCache
     description="Callbacks receiver",
     status_code=200,
 )
-async def subscription_callback(request: Request, redis: AsyncRedisCache) -> Dict[str, Any]:
+async def subscription_callback(
+    request: Request, redis: AsyncRedisCache
+) -> Dict[str, Any]:
     """Add a product to the cart."""
     data = await request.json()
     ip = request.client.host

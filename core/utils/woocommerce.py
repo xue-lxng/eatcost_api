@@ -797,39 +797,6 @@ class WooCommerceUtils:
             "data": subscription,
         }
 
-    # ─────────────────────────────────────────────
-    # ШАГ 3: Вызывается ПОСЛЕ подтверждения оплаты
-    # (webhook от TBank или ручная проверка)
-    # ─────────────────────────────────────────────
-    async def activate_after_payment(self, order_id: int, subscription_id: int):
-
-        # 3a: Завершаем заказ → триггерит Memberships
-        async with self.session.put(
-            f"{self.base_url}/wp-json/wc/v3/orders/{order_id}",
-            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
-            json={
-                "status": "completed",
-                "set_paid": True,
-                "date_paid": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
-            },
-        ) as response:
-            response.raise_for_status()
-            logger.info(f"✅ Order {order_id} → completed (Membership granted)")
-
-        # 3b: Активируем подписку
-        async with self.session.put(
-            f"{self.base_url}/wp-json/wc/v1/subscriptions/{subscription_id}",
-            headers=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
-            json={"status": "active"},
-        ) as response:
-            response.raise_for_status()
-            sub = await response.json()
-            logger.info(
-                f"✅ Subscription {subscription_id} → active "
-                f"(next_payment: {sub.get('next_payment_date', 'N/A')})"
-            )
-
-        return {"order_status": "completed", "subscription_status": "active"}
 
     async def get_order_data(self, order_id: int):
         if not self.session:

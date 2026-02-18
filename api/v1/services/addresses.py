@@ -29,7 +29,6 @@ class AddressService:
             logger.error(f"Error fetching addresses: {e}")
             return []
 
-
     @staticmethod
     async def get_addresses_set(redis: AsyncRedisCache) -> Set[str]:
         """
@@ -42,7 +41,9 @@ class AddressService:
         return set(await AddressService.get_addresses(redis))
 
     @staticmethod
-    async def find_addresses_starting_with(prefix: str, redis: AsyncRedisCache, limit: int = 10) -> List[str]:
+    async def find_addresses_starting_with(
+        prefix: str, redis: AsyncRedisCache, limit: int = 10
+    ) -> List[str]:
         """
         Находит адреса, начинающиеся с указанного префикса.
 
@@ -64,15 +65,16 @@ class AddressService:
             # Ищем адреса, начинающиеся с префикса (без учёта регистра)
             prefix_lower = prefix.lower()
             matching_addresses = [
-                addr for addr in addresses
-                if prefix_lower in addr.lower()
+                addr for addr in addresses if prefix_lower in addr.lower()
             ]
 
             # Сортируем результаты и ограничиваем лимитом
             matching_addresses.sort()
             return matching_addresses[:limit]
         except Exception as e:
-            logger.error(f"Error finding addresses starting with prefix '{prefix}': {e}")
+            logger.error(
+                f"Error finding addresses starting with prefix '{prefix}': {e}"
+            )
             return []
 
     @staticmethod

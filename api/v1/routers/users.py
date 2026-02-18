@@ -14,7 +14,8 @@ from api.v1.response_models.users import (
     UserWithMembershipResponse,
     UserQrResponse as UserQrResponseModel,
     UserMembershipResponse,
-    CardOutput, UserMembershipPurchaseResponse,
+    CardOutput,
+    UserMembershipPurchaseResponse,
 )
 from api.v1.services.auth import AuthService
 from api.v1.services.cards import CardsService
@@ -99,6 +100,7 @@ async def get_user_membership(
     except Exception as e:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=str(e))
 
+
 @post("/membership", status_code=HTTP_200_OK)
 async def buy_user_membership(
     request: Request,
@@ -117,7 +119,9 @@ async def buy_user_membership(
         user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
         user_id = user.get("id")
 
-        membership_data = await UsersService.get_user_membership(user_id)
+        membership_data = await UsersService.get_user_membership_payment_url(
+            user_id, jwt_token
+        )
         return membership_data
     except Exception as e:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=str(e))

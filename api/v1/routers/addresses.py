@@ -3,7 +3,11 @@ from typing import List
 from litestar import get, Router
 from litestar.params import Parameter
 
-from api.v1.response_models.addresses import AddressSuggestions, AddressCheckResponse, AddressDelivery
+from api.v1.response_models.addresses import (
+    AddressSuggestions,
+    AddressCheckResponse,
+    AddressDelivery,
+)
 from api.v1.services.addresses import AddressService
 from core.caching.in_redis import AsyncRedisCache
 
@@ -35,17 +39,17 @@ async def search_autocomplete(
     description="Add a product to the cart.",
 )
 async def address_check(
-        redis: AsyncRedisCache,
-        search_query: str = Parameter(
-            title="query", description="Поисковый запрос", query="query"
-        ),
+    redis: AsyncRedisCache,
+    search_query: str = Parameter(
+        title="query", description="Поисковый запрос", query="query"
+    ),
 ) -> AddressCheckResponse:
     """Add a product to the cart."""
     result = await AddressService.check_address_exists(search_query, redis)
 
     delivery = [
         AddressDelivery("Бесплатная доставка", "free_delivery", result),
-        AddressDelivery("Самовывоз", "local_pickup", True)
+        AddressDelivery("Самовывоз", "local_pickup", True),
     ]
 
     return AddressCheckResponse(address=search_query, delivery_types=delivery)

@@ -25,7 +25,7 @@ async def read_addresses_async(file_path: Optional[str] = None) -> List[str]:
     try:
         # Используем asyncio.to_thread для выполнения файловой операции в отдельном потоке
         content = await asyncio.to_thread(_read_file_content, str(file_path))
-        addresses = [line.strip() for line in content.split('\n') if line.strip()]
+        addresses = [line.strip() for line in content.split("\n") if line.strip()]
     except FileNotFoundError:
         logger.error(f"Файл не найден: {file_path}")
     except Exception as e:
@@ -36,7 +36,7 @@ async def read_addresses_async(file_path: Optional[str] = None) -> List[str]:
 
 def _read_file_content(file_path: str) -> str:
     """Вспомогательная функция для чтения содержимого файла."""
-    with open(file_path, 'r', encoding='utf-8') as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         return file.read()
 
 

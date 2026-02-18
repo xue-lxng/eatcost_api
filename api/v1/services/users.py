@@ -5,12 +5,14 @@ import msgspec
 from api.v1.response_models.users import (
     UserWithMembershipResponse,
     UserQrResponse,
-    UserMembershipResponse, UserMembershipPurchaseResponse,
+    UserMembershipResponse,
 )
-from config import CONSUMER_KEY, BASE_URL, CONSUMER_SECRET, TERMINAL_ID, TERMINAL_PASSWORD
+from config import (
+    CONSUMER_KEY,
+    BASE_URL,
+    CONSUMER_SECRET,
+)
 from core.utils.woocommerce import WooCommerceUtils
-from core.utils.tbank import TBankUtils
-
 
 logger = getLogger(__name__)
 
@@ -91,30 +93,3 @@ class UsersService:
         except Exception as e:
             logger.error(f"Error getting user membership {user_id}: {str(e)}")
             raise Exception(f"Failed to get user membership: {str(e)}")
-
-
-    @staticmethod
-    async def get_user_membership_payment_url(user_id: int, jwt_token: str) -> UserMembershipPurchaseResponse:
-        try:
-            async with WooCommerceUtils(
-                consumer_key=CONSUMER_KEY,
-                consumer_secret=CONSUMER_SECRET,
-                base_url=BASE_URL,
-            ) as woocommerce:
-                user_membership_payment = await woocommerce.create_subscription(jwt_token=jwt_token, user_id=user_id)
-            amount = float(user_membership_payment.get("total"))
-            order_id = user_membership_payment.get("id")
-            async with TBankUtils(
-                terminal_id=TERMINAL_ID,
-                password=TERMINAL_PASSWORD,
-            ) as tbank:
-                payment_data = await tbank.create_subscription(
-                    user_id=user_id,
-                    order_id=order_id,
-                    amount=amount,
-                )
-                return UserMembershipPurchaseResponse(payment_url=payment_data)
-
-        except Exception as e:
-            logger.error(f"Error creating user subscription payment URL {user_id}: {str(e)}")
-            raise Exception(f"Error creating user subscription payment URL: {str(e)}")

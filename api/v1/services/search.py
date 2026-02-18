@@ -42,18 +42,26 @@ def aggregate_product_data(product: dict[str, Any]) -> AggregatedProduct:
     # Получаем первое изображение или None
     first_image = None
     images = product.get("images", [])
-    if images and isinstance(images, list) and images[0] and isinstance(images[0], dict):
+    if (
+        images
+        and isinstance(images, list)
+        and images[0]
+        and isinstance(images[0], dict)
+    ):
         first_image = images[0].get("src")
 
     # Получаем категории
     categories = [
-        {"id": cat.get("id"), "name": cat.get("name")} for cat in product.get("categories", []) if cat
+        {"id": cat.get("id"), "name": cat.get("name")}
+        for cat in product.get("categories", [])
+        if cat
     ]
 
     # Получаем атрибуты (для вариативных товаров)
     attributes = [
         {"name": attr.get("name"), "options": attr.get("options", [])}
-        for attr in product.get("attributes", []) if attr
+        for attr in product.get("attributes", [])
+        if attr
     ]
 
     # Обработка цены продажи с учетом пустой строки

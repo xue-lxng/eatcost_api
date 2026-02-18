@@ -1,5 +1,6 @@
 import asyncio
-from typing import List, Dict, Any, Union
+from datetime import datetime
+from typing import List, Dict, Any, Union, Literal
 from urllib.parse import unquote
 
 import aiohttp
@@ -317,7 +318,11 @@ class WooCommerceUtils:
                     {
                         "category_id": cat.get("id"),
                         "category_name": cat.get("name"),
-                        "image": (cat.get("image", {}).get("src", "") if isinstance(cat.get("image"), dict) else "")
+                        "image": (
+                            cat.get("image", {}).get("src", "")
+                            if isinstance(cat.get("image"), dict)
+                            else ""
+                        ),
                     }
                     for cat in categories
                 ]
@@ -647,14 +652,39 @@ class WooCommerceUtils:
             status = response.status
             return {"status": status, "data": data}
 
-
-    async def create_subscription(self, jwt_token: str, user_id: int):
+    async def create_checkout(
+        self, jwt_token: str, user_id: int, delivery_type: Literal["delivery", "pickup"]
+    ):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
         user_data = await self.get_user_data(user_id)
+
+        user_cart = await self.get_user_cart(jwt_token)
+        items: List[Dict[str, Any]] = user_cart.get("items", {}).get("items", [])
+
+        if not items:
+            raise ValueError("Cart does not contain any items")
+
+        items_formated_for_checkout = [
+            {"product_id": item.get("id"), "quantity": item.get("quantity")}
+            for item in items
+        ]
+
+        delivery_mapping = {
+            "delivery": {
+                "method_id": "free_delivery",
+                "method_title": "Бесплатная доставка",
+                "total": "0",
+            },
+            "pickup": {
+                "method_id": "local_pickup",
+                "method_title": "Самовывоз",
+                "total": "0",
+            },
+        }
 
         data = {
             "payment_method": "tbank",
@@ -663,27 +693,16 @@ class WooCommerceUtils:
             "billing_address": {
                 "first_name": user_data.get("first_name"),
                 "last_name": user_data.get("last_name"),
-                "address_1": user_data.get("address_1"),
-                "address_2": "",
+                "address_1": user_data.get("address", {}).get("address_1"),
+                "address_2": user_data.get("address", {}).get("address_2"),
                 "city": "Новосибирск",
                 "state": "Новосибирская область",
                 "postcode": "630001",
                 "country": "RU",
                 "email": user_data.get("email"),
             },
-            "line_items": [
-                {
-                    "product_id": self.subscription_item_id,
-                    "quantity": 1
-                },
-            ],
-            "shipping_lines": [
-                {
-                    "method_id": "free_delivery",
-                    "method_title": "Бесплатная доставка",
-                    "total": "0"
-                }
-            ]
+            "line_items": items_formated_for_checkout,
+            "shipping_lines": [delivery_mapping[delivery_type]],
         }
 
         async with self.session.post(
@@ -695,6 +714,122 @@ class WooCommerceUtils:
             data = await response.json()
             status = response.status
             return {"status": status, "data": data}
+
+    async def create_subscription(self, jwt_token: str, user_id: int):
+        if not self.session:
+            raise RuntimeError("Session not initialized.")
+
+        user_data = await self.get_user_data(user_id)
+        headers = {"Authorization": jwt_token}
+
+        billing = {
+            "first_name": user_data.get("first_name", ""),
+            "last_name": user_data.get("last_name", ""),
+            "address_1": user_data.get("address", {}).get("address_1", ""),
+            "address_2": user_data.get("address", {}).get("address_2", ""),
+            "city": "Новосибирск",
+            "state": "Новосибирская область",
+            "postcode": "630001",
+            "country": "RU",
+            "email": user_data.get("email"),
+        }
+
+        # ─────────────────────────────────────────────
+        # ШАГ 1: Создаём родительский заказ (pending)
+        # ─────────────────────────────────────────────
+        order_data = {
+            "customer_id": user_id,
+            "status": "pending",
+            "payment_method": "tbank",
+            "payment_method_title": "Оплата онлайн",
+            "set_paid": False,
+            "created_via": "checkout",
+            "billing": billing,
+            "line_items": [{"product_id": self.subscription_item_id, "quantity": 1}],
+            # НЕ добавляем _wc_memberships_access_granted!
+        }
+
+        async with self.session.post(
+            f"{self.base_url}/wp-json/wc/v3/orders",
+            headers=headers,
+            json=order_data,
+        ) as response:
+            response.raise_for_status()
+            order = await response.json()
+            order_id = order["id"]
+            payment_url = order.get("payment_url", "")
+            logger.info(f"✅ Parent order {order_id} created (pending)")
+
+        # ─────────────────────────────────────────────
+        # ШАГ 2: Создаём подписку, привязанную к заказу
+        # ─────────────────────────────────────────────
+        subscription_data = {
+            "customer_id": user_id,
+            "parent_id": order_id,  # ← связь с заказом!
+            "status": "pending",  # активируется после оплаты
+            "billing_period": "month",
+            "billing_interval": 1,
+            "start_date": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+            "payment_method": "tbank",
+            "payment_method_title": "Оплата онлайн",
+            "billing": billing,
+            "line_items": [{"product_id": self.subscription_item_id, "quantity": 1}],
+        }
+
+        async with self.session.post(
+            f"{self.base_url}/wp-json/wc/v1/subscriptions",
+            headers=headers,
+            json=subscription_data,
+        ) as response:
+            logger.info(await response.json())
+            response.raise_for_status()
+            subscription = await response.json()
+            subscription_id = subscription["id"]
+            logger.info(
+                f"✅ Subscription {subscription_id} created "
+                f"(pending, parent_order={order_id})"
+            )
+
+        return {
+            "order_id": order_id,
+            "subscription_id": subscription_id,
+            "payment_url": payment_url,  # ← отдаёте пользователю для оплаты
+            "data": subscription,
+        }
+
+    # ─────────────────────────────────────────────
+    # ШАГ 3: Вызывается ПОСЛЕ подтверждения оплаты
+    # (webhook от TBank или ручная проверка)
+    # ─────────────────────────────────────────────
+    async def activate_after_payment(self, order_id: int, subscription_id: int):
+
+        # 3a: Завершаем заказ → триггерит Memberships
+        async with self.session.put(
+            f"{self.base_url}/wp-json/wc/v3/orders/{order_id}",
+            auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+            json={
+                "status": "completed",
+                "set_paid": True,
+                "date_paid": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+            },
+        ) as response:
+            response.raise_for_status()
+            logger.info(f"✅ Order {order_id} → completed (Membership granted)")
+
+        # 3b: Активируем подписку
+        async with self.session.put(
+            f"{self.base_url}/wp-json/wc/v1/subscriptions/{subscription_id}",
+            headers=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+            json={"status": "active"},
+        ) as response:
+            response.raise_for_status()
+            sub = await response.json()
+            logger.info(
+                f"✅ Subscription {subscription_id} → active "
+                f"(next_payment: {sub.get('next_payment_date', 'N/A')})"
+            )
+
+        return {"order_status": "completed", "subscription_status": "active"}
 
     async def get_order_data(self, order_id: int):
         if not self.session:
@@ -709,22 +844,17 @@ class WooCommerceUtils:
             result = await response.json()
             return result
 
-    async def change_order_status(
-            self,
-            order_id: int,
-            new_status: str,
-            jwt_token: str
-    ):
+    async def change_order_status(self, order_id: int, new_status: str, jwt_token: str):
         if not self.session:
             error_msg = "Session not initialized. Use 'async with WooCommerceUtils(...) as wc:' to initialize."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
         async with self.session.put(
-                f"{self.base_url}/api-proxy.php?endpoint=wc/v3/orders/{order_id}",
-                headers={"Authorization": jwt_token},
-                json={
-                    "status": new_status,
-                },
+            f"{self.base_url}/api-proxy.php?endpoint=wc/v3/orders/{order_id}",
+            headers={"Authorization": jwt_token},
+            json={
+                "status": new_status,
+            },
         ) as response:
             response.raise_for_status()
             data = await response.json()
@@ -741,7 +871,10 @@ class WooCommerceUtils:
             "email": user.get("email"),
             "first_name": user.get("first_name"),
             "last_name": user.get("last_name"),
-            "address": user.get("billing", {}).get("address_1"),
+            "address": {
+                "address_1": user.get("billing", {}).get("address_1"),
+                "address_2": user.get("billing", {}).get("address_2"),
+            },
         }
         return user_data
 

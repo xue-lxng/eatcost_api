@@ -19,7 +19,10 @@ class CartService:
                     jwt_token.replace("Bearer ", "")
                 )
                 if not decoded_token or not decoded_token.get("id"):
-                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                    return {
+                        "error": "Invalid JWT token",
+                        "message": "Token decoding failed",
+                    }
                 user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
@@ -55,7 +58,10 @@ class CartService:
                     jwt_token.replace("Bearer ", "")
                 )
                 if not decoded_token or not decoded_token.get("id"):
-                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                    return {
+                        "error": "Invalid JWT token",
+                        "message": "Token decoding failed",
+                    }
                 user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
@@ -97,7 +103,10 @@ class CartService:
                     jwt_token.replace("Bearer ", "")
                 )
                 if not decoded_token or not decoded_token.get("id"):
-                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                    return {
+                        "error": "Invalid JWT token",
+                        "message": "Token decoding failed",
+                    }
                 user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}
@@ -139,7 +148,10 @@ class CartService:
                     jwt_token.replace("Bearer ", "")
                 )
                 if not decoded_token or not decoded_token.get("id"):
-                    return {"error": "Invalid JWT token", "message": "Token decoding failed"}
+                    return {
+                        "error": "Invalid JWT token",
+                        "message": "Token decoding failed",
+                    }
                 user = decoded_token.get("id")
             except ValueError as e:
                 return {"error": "Invalid JWT token", "message": str(e)}

@@ -134,7 +134,7 @@ class TBankUtils:
             "OrderId": order_id,
             "Amount": int(amount * 100),
             "Recurrent": "Y",
-            "NotificationURL": "https://eatcost.ru/api/v1/callbacks",
+            "NotificationURL": "https://eatcost.ru/api/v1/callbacks/subscriptions",
         }
         token = self.generate_token(params, self.password)
         params["Token"] = token

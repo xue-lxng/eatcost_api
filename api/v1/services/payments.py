@@ -99,9 +99,8 @@ class PaymentService:
                     email=ADMIN_EMAIL, password=ADMIN_PASSWORD
                 )
                 order_data = await wc.get_order_data(order_id)
-                logger.info(order_data)
                 await wc.change_order_status(
-                    order_id, status_map.get(callback_status), jwt_token.get("jwt")
+                    order_data.get("parent_id"), status_map.get(callback_status), jwt_token.get("jwt")
                 )
 
             if rebill_id:

@@ -36,6 +36,7 @@ class UsersService:
                 user_data = await woocommerce.get_user_data(user_id=user_id)
                 user_membership = await woocommerce.get_user_membership(user_id=user_id)
                 user_data["membership"] = user_membership
+                user_data["address"] = f'{user_data.get("address", {}).get("address_1", {})}\n{user_data.get("address", {}).get("address_2", {}) if user_data.get("address", {}).get("address_2", {}) else ""}'
 
                 encoder = msgspec.json.Encoder()
                 decoder = msgspec.json.Decoder(type=UserWithMembershipResponse)

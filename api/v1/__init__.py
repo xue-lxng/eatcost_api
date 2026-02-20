@@ -1,6 +1,6 @@
 from litestar import Router
 
-from api.v1.routers import auth, products, cart, users, addresses, callbacks, payments
+from api.v1.routers import auth, products, cart, users, addresses, callbacks, payments, orders
 
 router = Router(
     path="/v1",
@@ -12,5 +12,6 @@ router = Router(
         addresses.router,
         callbacks.router,
         payments.router,
+        orders.router
     ],
 )

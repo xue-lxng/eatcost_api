@@ -1017,6 +1017,99 @@ class WooCommerceUtils:
             logger.error(f"Unexpected error cancelling subscriptions for user_id={user_id}: {str(e)}")
             raise ValueError(f"Failed to cancel subscriptions: {str(e)}")
 
+    async def get_user_orders(
+            self,
+            user_id: int,
+            status: str = "any",
+            page: int = 1,
+            per_page: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all orders for a specific user.
+
+        Args:
+            user_id:  WordPress customer ID
+            status:   Order status filter ('any', 'pending', 'processing',
+                      'completed', 'cancelled', 'refunded', 'failed', 'on-hold')
+            page:     Pagination page number (default: 1)
+            per_page: Results per page, max 100 (default: 20)
+
+        Returns:
+            List of simplified order dicts
+
+        Raises:
+            RuntimeError: If session is not initialized
+            ClientResponseError: If API request fails
+        """
+        logger.info(f"Fetching orders for user_id={user_id}, status={status}, page={page}")
+        if not self.session:
+            raise RuntimeError("Session not initialized. Use 'async with WooCommerceUtils(...) as wc:'")
+
+        try:
+            async with self.session.get(
+                    f"{self.base_url}/wp-json/wc/v3/orders",
+                    params={
+                        "customer": user_id,
+                        "status": status,
+                        "page": page,
+                        "per_page": per_page,
+                        "orderby": "date",
+                        "order": "desc",
+                    },
+                    auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+            ) as response:
+                response.raise_for_status()
+                orders = await response.json()
+
+            logger.info(f"Retrieved {len(orders)} orders for user_id={user_id}")
+            return [self._aggregate_order_data(order) for order in orders]
+
+        except ClientResponseError as e:
+            logger.error(f"WooCommerce API error (get_user_orders): {e.status} - {e.message}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching orders for user_id={user_id}: {str(e)}")
+            raise ValueError(f"Failed to fetch orders: {str(e)}")
+
+    @staticmethod
+    def _aggregate_order_data(order: Dict[str, Any]) -> Dict[str, Any]:
+        """Simplify raw WooCommerce order data."""
+        return {
+            "id": order.get("id"),
+            "status": order.get("status"),
+            "date_created": order.get("date_created"),
+            "date_modified": order.get("date_modified"),
+            "total": order.get("total"),
+            "currency": order.get("currency"),
+            "payment_method": order.get("payment_method"),
+            "payment_method_title": order.get("payment_method_title"),
+            "transaction_id": order.get("transaction_id"),
+            "line_items": [
+                {
+                    "id": item.get("id"),
+                    "product_id": item.get("product_id"),
+                    "name": item.get("name"),
+                    "quantity": item.get("quantity"),
+                    "total": item.get("total"),
+                }
+                for item in order.get("line_items", [])
+            ],
+            "shipping_lines": [
+                {
+                    "method_id": line.get("method_id"),
+                    "method_title": line.get("method_title"),
+                    "total": line.get("total"),
+                }
+                for line in order.get("shipping_lines", [])
+            ],
+            "billing": {
+                "first_name": order.get("billing", {}).get("first_name"),
+                "last_name": order.get("billing", {}).get("last_name"),
+                "email": order.get("billing", {}).get("email"),
+                "address_1": order.get("billing", {}).get("address_1"),
+            },
+        }
+
     async def close(self):
         """Manually close the session (optional if using context manager)."""
         if self.session:

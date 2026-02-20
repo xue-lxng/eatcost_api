@@ -691,7 +691,7 @@ class WooCommerceUtils:
             "payment_method": "tbank",
             "payment_method_title": "TBank",
             "set_paid": False,
-            "billing_address": {
+            "billing": {
                 "first_name": user_data.get("first_name"),
                 "last_name": user_data.get("last_name"),
                 "address_1": user_data.get("address", {}).get("address_1"),
@@ -705,6 +705,8 @@ class WooCommerceUtils:
             "line_items": items_formated_for_checkout,
             "shipping_lines": [delivery_mapping[delivery_type]],
         }
+
+        logger.info(f"{data=}")
 
         async with self.session.post(
             f"{self.base_url}/wp-json/wc/v3/orders",

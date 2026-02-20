@@ -687,6 +687,7 @@ class WooCommerceUtils:
         }
 
         data = {
+            "customer_id": user_id,
             "payment_method": "tbank",
             "payment_method_title": "TBank",
             "set_paid": False,
@@ -870,7 +871,7 @@ class WooCommerceUtils:
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            user = result[0] if result else {}
+            user = result[-1] if result else {}
             return {
                 "plan_name": user.get("plan_name"),
                 "status": user.get("status"),
@@ -911,6 +912,108 @@ class WooCommerceUtils:
             ):
                 return True
             return False
+
+    async def get_active_subscriptions(self, user_id: int) -> List[Dict[str, Any]]:
+        """
+        Get all active subscriptions for a user.
+
+        Args:
+            user_id: WordPress user ID
+
+        Returns:
+            List of active subscription dicts (id, status, start_date, next_payment_date)
+
+        Raises:
+            RuntimeError: If session is not initialized
+            ClientResponseError: If API request fails
+        """
+        logger.info(f"Fetching active subscriptions for user_id={user_id}")
+        if not self.session:
+            raise RuntimeError("Session not initialized. Use 'async with WooCommerceUtils(...) as wc:'")
+
+        try:
+            async with self.session.get(
+                    f"{self.base_url}/wp-json/wc/v3/subscriptions",
+                    params={
+                        "customer": user_id,
+                        "status": "active",
+                        "per_page": 100,
+                    },
+                    auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+            ) as response:
+                response.raise_for_status()
+                subscriptions = await response.json()
+
+            logger.info(f"Found {len(subscriptions)} active subscriptions for user_id={user_id}")
+            return [
+                {
+                    "id": sub.get("id"),
+                    "status": sub.get("status"),
+                    "start_date": sub.get("start_date"),
+                    "next_payment_date": sub.get("next_payment_date"),
+                    "billing_period": sub.get("billing_period"),
+                }
+                for sub in subscriptions
+            ]
+
+        except ClientResponseError as e:
+            logger.error(f"WooCommerce API error (get_active_subscriptions): {e.status} - {e.message}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error fetching subscriptions for user_id={user_id}: {str(e)}")
+            raise ValueError(f"Failed to fetch subscriptions: {str(e)}")
+
+    async def cancel_all_subscriptions(self, user_id: int) -> Dict[str, Any]:
+        """
+        Cancel all active subscriptions for a user.
+
+        Args:
+            user_id: WordPress user ID
+
+        Returns:
+            Dict with cancelled_count and list of cancelled subscription IDs
+
+        Raises:
+            RuntimeError: If session is not initialized
+            ValueError: If no active subscriptions found or API error
+        """
+        logger.info(f"Cancelling all active subscriptions for user_id={user_id}")
+        if not self.session:
+            raise RuntimeError("Session not initialized. Use 'async with WooCommerceUtils(...) as wc:'")
+
+        subscriptions = await self.get_active_subscriptions(user_id)
+
+        if not subscriptions:
+            logger.warning(f"No active subscriptions found for user_id={user_id}")
+            return {"cancelled_count": 0, "cancelled_ids": []}
+
+        async def _cancel_one(sub_id: int) -> int:
+            async with self.session.put(
+                    f"{self.base_url}/wp-json/wc/v3/subscriptions/{sub_id}",
+                    json={"status": "pending-cancel"},
+                    auth=aiohttp.BasicAuth(self.consumer_key, self.consumer_secret),
+            ) as resp:
+                resp.raise_for_status()
+                result = await resp.json()
+                logger.info(f"✅ Subscription {sub_id} cancelled")
+                return result.get("id")
+
+        try:
+            # Отменяем все параллельно
+            cancelled_ids = await asyncio.gather(
+                *[_cancel_one(sub["id"]) for sub in subscriptions]
+            )
+            return {
+                "cancelled_count": len(cancelled_ids),
+                "cancelled_ids": list(cancelled_ids),
+            }
+
+        except ClientResponseError as e:
+            logger.error(f"WooCommerce API error (cancel_all_subscriptions): {e.status} - {e.message}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error cancelling subscriptions for user_id={user_id}: {str(e)}")
+            raise ValueError(f"Failed to cancel subscriptions: {str(e)}")
 
     async def close(self):
         """Manually close the session (optional if using context manager)."""

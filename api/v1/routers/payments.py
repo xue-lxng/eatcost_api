@@ -1,4 +1,4 @@
-from litestar import Router, post, Request
+from litestar import Router, post, delete, Request
 from litestar.exceptions import HTTPException
 from litestar.status_codes import (
     HTTP_200_OK,
@@ -10,6 +10,7 @@ from api.v1.request_models.payments import CheckoutRequest
 from api.v1.response_models.payments import PaymentResponse
 from api.v1.response_models.users import (
     UserMembershipPurchaseResponse,
+    CancelSubscriptionsResponse,  # новая response-модель (см. ниже)
 )
 from api.v1.services.auth import AuthService
 from api.v1.services.payments import PaymentService
@@ -26,19 +27,39 @@ async def buy_user_membership(
     if jwt_token is None:
         raise HTTPException(status_code=401, detail="Authorization token is missing")
     if "Bearer " not in jwt_token:
-        raise HTTPException(
-            status_code=401, detail="Invalid authorization token format"
-        )
+        raise HTTPException(status_code=401, detail="Invalid authorization token format")
+
     try:
         user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
         user_id = user.get("id")
-
         membership_data = await PaymentService.get_user_membership_payment_url(
             user_id, jwt_token
         )
         return membership_data
     except Exception as e:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@delete("/membership", status_code=HTTP_200_OK)
+async def cancel_user_membership(
+    request: Request,
+) -> CancelSubscriptionsResponse:
+    """
+    Cancel all active subscriptions for the authenticated user
+    """
+    jwt_token = request.headers.get("Authorization", None)
+    if jwt_token is None:
+        raise HTTPException(status_code=401, detail="Authorization token is missing")
+    if "Bearer " not in jwt_token:
+        raise HTTPException(status_code=401, detail="Invalid authorization token format")
+
+    try:
+        user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
+        user_id = user.get("id")
+        result = await PaymentService.cancel_user_subscriptions(user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @post("/checkout", status_code=HTTP_200_OK)
@@ -53,13 +74,11 @@ async def checkout(
     if jwt_token is None:
         raise HTTPException(status_code=401, detail="Authorization token is missing")
     if "Bearer " not in jwt_token:
-        raise HTTPException(
-            status_code=401, detail="Invalid authorization token format"
-        )
+        raise HTTPException(status_code=401, detail="Invalid authorization token format")
+
     try:
         user = AuthService.decode_jwt_token(jwt_token.replace("Bearer ", ""))
         user_id = user.get("id")
-
         membership_data = await PaymentService.create_checkout(
             user_id, jwt_token, data.delivery_type
         )
@@ -75,5 +94,6 @@ router = Router(
     route_handlers=[
         checkout,
         buy_user_membership,
+        cancel_user_membership,  # ← добавлен
     ],
 )

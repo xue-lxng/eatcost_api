@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 import msgspec
 
@@ -14,7 +14,7 @@ class UserResponse(msgspec.Struct, omit_defaults=True):
 class UserMembershipResponse(msgspec.Struct, omit_defaults=True):
     plan_name: str
     status: str
-    end_date: datetime
+    end_date: datetime | None
 
 
 class UserMembershipPurchaseResponse(msgspec.Struct, omit_defaults=True):
@@ -35,3 +35,7 @@ class CardOutput(msgspec.Struct, omit_defaults=True):
     CardId: str
     Pan: str
     ExpDate: str
+
+class CancelSubscriptionsResponse(msgspec.Struct, omit_defaults=True):
+    cancelled_count: int
+    cancelled_ids: List[int]

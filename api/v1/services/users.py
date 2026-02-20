@@ -85,6 +85,7 @@ class UsersService:
                 base_url=BASE_URL,
             ) as woocommerce:
                 user_membership = await woocommerce.get_user_membership(user_id=user_id)
+                logger.info(f"User membership details retrieved for user {user_id}: {user_membership}")
                 encoder = msgspec.json.Encoder()
                 decoder = msgspec.json.Decoder(type=UserMembershipResponse)
 

@@ -172,3 +172,9 @@ class PaymentService:
                 f"Error creating user subscription payment URL {user_id}: {str(e)}"
             )
             raise Exception(f"Error creating user subscription payment URL: {str(e)}")
+
+    @staticmethod
+    async def cancel_user_subscriptions(user_id: int) -> dict:
+        async with WooCommerceUtils(CONSUMER_KEY, CONSUMER_SECRET, BASE_URL) as wc:
+            return await wc.cancel_all_subscriptions(user_id)
+

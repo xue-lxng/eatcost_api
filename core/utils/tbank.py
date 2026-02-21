@@ -89,6 +89,10 @@ class TBankUtils:
         ]
 
     async def get_user_cards(self, user_id: str) -> List[Dict[str, str]]:
+        try:
+            await self.create_customer(int(user_id))
+        except Exception as e:
+            pass
         params = {
             "TerminalKey": self.terminal_id,
             "CustomerKey": str(user_id),
@@ -101,10 +105,10 @@ class TBankUtils:
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            logger.info(f"Cards retrieved: {result}")
-            return self.aggregate_cards(
-                result
-            )  # Assuming the response contains a list of cards
+        logger.info(f"Cards retrieved: {result}")
+        return self.aggregate_cards(
+            result
+        )  # Assuming the response contains a list of cards
 
     async def create_customer(self, user_id: int):
         params = {

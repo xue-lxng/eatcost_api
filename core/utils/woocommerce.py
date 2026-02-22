@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Union, Literal
 from urllib.parse import unquote
 
 import aiohttp
-from aiohttp import ClientResponseError
+from aiohttp import ClientResponseError, BasicAuth
 
 from config import AUTH_KEY, logger
 
@@ -754,7 +754,7 @@ class WooCommerceUtils:
 
         async with self.session.post(
             f"{self.base_url}/wp-json/wc/v3/orders",
-            headers=headers,
+            auth=BasicAuth(self.consumer_key, self.consumer_secret),
             json=order_data,
         ) as response:
             response.raise_for_status()
@@ -781,7 +781,7 @@ class WooCommerceUtils:
 
         async with self.session.post(
             f"{self.base_url}/wp-json/wc/v1/subscriptions",
-            headers=headers,
+            auth=BasicAuth(self.consumer_key, self.consumer_secret),
             json=subscription_data,
         ) as response:
             logger.info(await response.json())

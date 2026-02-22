@@ -873,7 +873,14 @@ class WooCommerceUtils:
         ) as response:
             response.raise_for_status()
             result = await response.json()
-            user = result[-1] if result else {}
+            filtered_result = [res for res in result if res.get("plan_name") == "Подписка"]
+            if not filtered_result:
+                return {
+                    "plan_name": "Нет подписки",
+                    "status": "expired",
+                    "end_date": None,
+                }
+            user = filtered_result[0] if result else {}
             return {
                 "plan_name": user.get("plan_name"),
                 "status": user.get("status"),
